@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Improve form input focus states */
+input:focus, select:focus, textarea:focus {
+  @apply outline-none ring-2 ring-blue-500 border-blue-500;
+}
+
+/* Table hover effects */
+tr:hover {
+  @apply bg-gray-50;
+}
+
+/* Transitions for all interactive elements */
+button, a {
+  @apply transition-all duration-200;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-500;
+}
+
+/* Table responsiveness */
+@media (max-width: 768px) {
+  .table-responsive {
+    @apply block w-full overflow-x-auto;
+  }
+  
+  table {
+    @apply w-full whitespace-nowrap;
+  }
+  
+  th, td {
+    @apply px-4 py-2;
+  }
+}
+
+/* Mobile navigation adjustments */
+@media (max-width: 1024px) {
+  main {
+    @apply pb-20;
+  }
+}
