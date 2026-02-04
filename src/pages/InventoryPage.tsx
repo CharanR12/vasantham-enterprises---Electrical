@@ -4,8 +4,9 @@ import InventorySearchFilter from '../components/inventory/InventorySearchFilter
 import InventoryKPICards from '../components/inventory/InventoryKPICards';
 import ProductCard from '../components/inventory/ProductCard';
 import ProductForm from '../components/inventory/ProductForm';
-import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import { KPISkeleton } from '../components/skeletons/KPISkeleton';
+import { ProductSkeleton } from '../components/skeletons/ProductSkeleton';
 import { Product } from '../types/inventory';
 import { Plus } from 'lucide-react';
 
@@ -67,14 +68,7 @@ const InventoryPage: React.FC = () => {
 
   const filteredProducts = filterProducts();
 
-  if (loading) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-[400px] animate-fadeIn">
-        <LoadingSpinner size="lg" />
-        <p className="mt-6 text-slate-500 font-semibold tracking-wide animate-pulse">Loading inventory...</p>
-      </div>
-    );
-  }
+  // Removed full-page loading in favor of integrated skeletons
 
   return (
     <div className="space-y-8 pb-12">
@@ -98,11 +92,20 @@ const InventoryPage: React.FC = () => {
       </div>
 
       <div className="animate-fadeIn [animation-delay:100ms]">
-        <InventoryKPICards products={products} salesEntries={salesEntries} />
+        {loading ? <KPISkeleton /> : <InventoryKPICards products={products} salesEntries={salesEntries} />}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn [animation-delay:200ms]">
-        {filteredProducts.length > 0 ? (
+        {loading ? (
+          <>
+            <ProductSkeleton />
+            <ProductSkeleton />
+            <ProductSkeleton />
+            <ProductSkeleton />
+            <ProductSkeleton />
+            <ProductSkeleton />
+          </>
+        ) : filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
             <ProductCard
               key={product.id}

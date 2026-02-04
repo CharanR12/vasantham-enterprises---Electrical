@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
 import { useCustomers } from '../context/CustomerContext';
-import { SalesPerson } from '../types';
 import { Edit2, Save, X, ArrowLeft, Plus, Trash2, Package, Users } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';

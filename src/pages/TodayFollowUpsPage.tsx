@@ -3,8 +3,9 @@ import SearchFilter from '../components/SearchFilter';
 import KPICards from '../components/KPICards';
 import CustomerCard from '../components/CustomerCard';
 import CustomerForm from '../components/CustomerForm';
-import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import { KPISkeleton } from '../components/skeletons/KPISkeleton';
+import { CustomerSkeleton } from '../components/skeletons/CustomerSkeleton';
 import { useCustomers } from '../context/CustomerContext';
 import { Customer, FollowUpStatus, ReferralSource } from '../types';
 import { Plus } from 'lucide-react';
@@ -119,14 +120,7 @@ const TodayFollowUpsPage: React.FC = () => {
 
   const filtered = filterCustomers();
 
-  if (loading) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-[400px] animate-fadeIn">
-        <LoadingSpinner size="lg" />
-        <p className="mt-6 text-slate-500 font-semibold tracking-wide animate-pulse">Loading customers...</p>
-      </div>
-    );
-  }
+  // Removed full-page loading in favor of integrated skeletons
 
   return (
     <div className="space-y-8 pb-12">
@@ -162,11 +156,20 @@ const TodayFollowUpsPage: React.FC = () => {
       </div>
 
       <div className="animate-fadeIn [animation-delay:100ms]">
-        <KPICards customers={filtered} />
+        {loading ? <KPISkeleton /> : <KPICards customers={filtered} />}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn [animation-delay:200ms]">
-        {filtered.length > 0 ? (
+        {loading ? (
+          <>
+            <CustomerSkeleton />
+            <CustomerSkeleton />
+            <CustomerSkeleton />
+            <CustomerSkeleton />
+            <CustomerSkeleton />
+            <CustomerSkeleton />
+          </>
+        ) : filtered.length > 0 ? (
           filtered.map((customer) => (
             <CustomerCard
               key={customer.id}
