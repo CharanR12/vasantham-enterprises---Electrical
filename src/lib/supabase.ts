@@ -7,7 +7,23 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Default client with anon key
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/**
+ * Creates a Supabase client with the Clerk JWT token.
+ * This should be used when Row Level Security (RLS) is enabled
+ * and linked with Clerk.
+ */
+export const createClerkSupabaseClient = (clerkToken: string) => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${clerkToken}`,
+      },
+    },
+  });
+};
 
 // Database types
 export type Database = {
@@ -17,16 +33,19 @@ export type Database = {
         Row: {
           id: string;
           name: string;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          created_by?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
+          created_by?: string | null;
           created_at?: string;
         };
       };
@@ -39,6 +58,7 @@ export type Database = {
           referral_source: string;
           sales_person_id: string | null;
           remarks: string;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -49,6 +69,7 @@ export type Database = {
           referral_source?: string;
           sales_person_id?: string | null;
           remarks?: string;
+          created_by?: string | null;
           created_at?: string;
         };
         Update: {
@@ -59,6 +80,7 @@ export type Database = {
           referral_source?: string;
           sales_person_id?: string | null;
           remarks?: string;
+          created_by?: string | null;
           created_at?: string;
         };
       };
@@ -69,6 +91,7 @@ export type Database = {
           date: string;
           status: string;
           remarks: string;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
@@ -77,6 +100,7 @@ export type Database = {
           date: string;
           status?: string;
           remarks?: string;
+          created_by?: string | null;
           created_at?: string;
         };
         Update: {
@@ -85,6 +109,7 @@ export type Database = {
           date?: string;
           status?: string;
           remarks?: string;
+          created_by?: string | null;
           created_at?: string;
         };
       };

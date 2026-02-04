@@ -1,7 +1,14 @@
 import React from 'react';
 import { Product, SaleEntry } from '../../types/inventory';
-import { X, Calendar, User, FileText, Package } from 'lucide-react';
+import { Calendar, User, FileText, Package } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type SalesLogModalProps = {
   product: Product;
@@ -21,40 +28,37 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
   const totalSold = salesEntries.reduce((sum, entry) => sum + entry.quantitySold, 0);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden rounded-2xl">
         <div className="flex justify-between items-center p-4 border-b">
-          <div>
-            <h2 className="text-lg font-semibold">Sales Log</h2>
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Sales Log</DialogTitle>
             <p className="text-sm text-gray-600">{product.productName} - {product.brand.name}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-5 w-5" />
-          </button>
+          </DialogHeader>
         </div>
 
         <div className="p-4 border-b bg-gray-50">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-blue-600">{product.quantityAvailable}</div>
+              <div className="text-2xl font-bold text-brand-600">{product.quantityAvailable}</div>
               <div className="text-sm text-gray-600">Available</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-green-600">{totalSold}</div>
+              <div className="text-2xl font-bold text-emerald-600">{totalSold}</div>
               <div className="text-sm text-gray-600">Total Sold</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-purple-600">{salesEntries.length}</div>
+              <div className="text-2xl font-bold text-violet-600">{salesEntries.length}</div>
               <div className="text-sm text-gray-600">Transactions</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-orange-600">{product.quantityAvailable + totalSold}</div>
+              <div className="text-2xl font-bold text-amber-600">{product.quantityAvailable + totalSold}</div>
               <div className="text-sm text-gray-600">Total Stock</div>
             </div>
           </div>
         </div>
 
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-12rem)]">
+        <div className="p-4 overflow-y-auto max-h-[calc(90vh-16rem)]">
           {sortedEntries.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -113,13 +117,13 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
                       </div>
                       <span className="text-sm font-bold text-gray-900">{entry.quantitySold} units</span>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <div className="flex items-center text-gray-600">
                         <User className="h-4 w-4 mr-2" />
                         <span className="text-sm">{entry.customerName}</span>
                       </div>
-                      
+
                       {entry.billNumber && (
                         <div className="flex items-center text-gray-600">
                           <FileText className="h-4 w-4 mr-2" />
@@ -133,8 +137,17 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
             </div>
           )}
         </div>
-      </div>
-    </div>
+
+        <div className="p-4 border-t bg-slate-50/50 flex justify-center">
+          <Button
+            onClick={onClose}
+            className="h-10 px-8 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold"
+          >
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

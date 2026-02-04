@@ -1,6 +1,9 @@
 import React from 'react';
-import { Search, Calendar } from 'lucide-react';
+import { Search, Calendar as CalendarIcon, Plus } from 'lucide-react';
 import { SalesPerson, FollowUpStatus, ReferralSource } from '../types';
+import { Input } from '@/components/ui/input';
+import { Combobox } from '@/components/ui/combobox';
+import { DateFilter } from './ui/date-filter';
 
 type SearchFilterProps = {
   searchTerm: string;
@@ -12,14 +15,14 @@ type SearchFilterProps = {
   referralSource: ReferralSource | '';
   setReferralSource: (value: ReferralSource | '') => void;
   salesPersons: SalesPerson[];
-  viewMode: 'today' | 'all' | 'period';
-  setViewMode: (mode: 'today' | 'all' | 'period') => void;
-  dateRange: { start: string; end: string };
-  setDateRange: (range: { start: string; end: string }) => void;
+  followUpFilter: 'all' | 'today' | 'custom';
+  setFollowUpFilter: (filter: 'all' | 'today' | 'custom') => void;
+  followUpDateRange: { start: string; end: string };
+  setFollowUpDateRange: (range: { start: string; end: string }) => void;
+  creationFilter: 'all' | 'today' | 'custom';
+  setCreationFilter: (filter: 'all' | 'today' | 'custom') => void;
   creationDateRange: { start: string; end: string };
   setCreationDateRange: (range: { start: string; end: string }) => void;
-  filterByCreationDate: boolean;
-  setFilterByCreationDate: (value: boolean) => void;
   amountReceivedFilter: 'all' | 'received' | 'not-received';
   setAmountReceivedFilter: (value: 'all' | 'received' | 'not-received') => void;
 };
@@ -34,154 +37,118 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
   referralSource,
   setReferralSource,
   salesPersons,
-  viewMode,
-  setViewMode,
-  dateRange,
-  setDateRange,
+  followUpFilter,
+  setFollowUpFilter,
+  followUpDateRange,
+  setFollowUpDateRange,
+  creationFilter,
+  setCreationFilter,
   creationDateRange,
   setCreationDateRange,
-  filterByCreationDate,
-  setFilterByCreationDate,
   amountReceivedFilter,
   setAmountReceivedFilter,
 }) => {
+  const salesPersonOptions = [
+    { value: 'null', label: 'All Sales Persons' },
+    ...salesPersons.map((person) => ({ value: person.id, label: person.name }))
+  ];
+
+  const statusOptions = [
+    { value: 'all', label: 'All Statuses' },
+    { value: 'Not yet contacted', label: 'Not yet contacted' },
+    { value: 'Scheduled next follow-up', label: 'Scheduled next follow-up' },
+    { value: 'Sales completed', label: 'Sales completed' },
+    { value: 'Sales rejected', label: 'Sales rejected' },
+  ];
+
+  const referralOptions = [
+    { value: 'all', label: 'All Referral Sources' },
+    { value: 'Self Marketing', label: 'Self Marketing' },
+    { value: 'Doors Data', label: 'Doors Data' },
+    { value: 'Walk-in Customer', label: 'Walk-in Customer' },
+    { value: 'Collection', label: 'Collection' },
+    { value: 'Build Expo 2024', label: 'Build Expo 2024' },
+    { value: 'Build Expo 2025', label: 'Build Expo 2025' },
+  ];
+
+  const amountStatusOptions = [
+    { value: 'all', label: 'All Amount Status' },
+    { value: 'received', label: 'Amount Received' },
+    { value: 'not-received', label: 'Amount Not Received' },
+  ];
+
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-4 space-y-4">
-        {/* First Row - Basic Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+    <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-200/50 shadow-sm transition-all duration-300">
+      <div className="flex flex-wrap gap-3">
+        {/* Basic Filters */}
+        <div className="relative w-full sm:w-64">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+            <Search className="h-4 w-4 text-slate-400" />
           </div>
-
-          <select
-            value={salesPerson}
-            onChange={(e) => setSalesPerson(e.target.value)}
-            className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 truncate"
-          >
-            <option value="">All Sales Persons</option>
-            {salesPersons.map((person) => (
-              <option key={person.id} value={person.id} className="truncate">
-                {person.name}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={followUpStatus}
-            onChange={(e) => setFollowUpStatus(e.target.value as FollowUpStatus | '')}
-            className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Statuses</option>
-            <option value="Not yet contacted">Not yet contacted</option>
-            <option value="Scheduled next follow-up">Scheduled next follow-up</option>
-            <option value="Sales completed">Sales completed</option>
-            <option value="Sales rejected">Sales rejected</option>
-          </select>
-
-          <select
-            value={referralSource}
-            onChange={(e) => setReferralSource(e.target.value as ReferralSource | '')}
-            className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">All Referral Sources</option>
-            <option value="Self Marketing">Self Marketing</option>
-            <option value="Doors Data">Doors Data</option>
-            <option value="Walk-in Customer">Walk-in Customer</option>
-            <option value="Collection">Collection</option>
-            <option value="Build Expo 2024">Build Expo 2024</option>
-            <option value="Build Expo 2025">Build Expo 2025</option>
-          </select>
-
-          <select
-            value={amountReceivedFilter}
-            onChange={(e) => setAmountReceivedFilter(e.target.value as 'all' | 'received' | 'not-received')}
-            className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">All Amount Status</option>
-            <option value="received">Amount Received</option>
-            <option value="not-received">Amount Not Received</option>
-          </select>
+          <Input
+            placeholder="Search customers..."
+            value={searchTerm}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 font-medium"
+          />
         </div>
 
-        {/* Second Row - Date Filtering Options */}
-        <div className="border-t pt-4">
-          <div className="flex flex-wrap items-center gap-4 mb-3">
-            <h3 className="text-sm font-medium text-gray-700">Date Filtering:</h3>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                name="dateFilter"
-                checked={!filterByCreationDate}
-                onChange={() => setFilterByCreationDate(false)}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">By Follow-up Date</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input
-                type="radio"
-                name="dateFilter"
-                checked={filterByCreationDate}
-                onChange={() => setFilterByCreationDate(true)}
-                className="text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">By Creation Date</span>
-            </label>
-          </div>
+        <Combobox
+          options={salesPersonOptions}
+          value={salesPerson || 'null'}
+          onChange={(val) => setSalesPerson(val === 'null' ? '' : val)}
+          placeholder="All Sales Persons"
+          searchPlaceholder="Search sales person..."
+          className="w-full sm:w-64"
+        />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-            <select
-              value={viewMode}
-              onChange={(e) => setViewMode(e.target.value as 'today' | 'all' | 'period')}
-              className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All {filterByCreationDate ? 'Created' : 'Follow-ups'}</option>
-              <option value="today">Today's {filterByCreationDate ? 'Created' : 'Follow-ups'}</option>
-              <option value="period">Custom Period</option>
-            </select>
+        <Combobox
+          options={statusOptions}
+          value={followUpStatus || 'all'}
+          onChange={(val) => setFollowUpStatus(val === 'all' ? '' : val as FollowUpStatus)}
+          placeholder="All Statuses"
+          searchPlaceholder="Search status..."
+          className="w-full sm:w-64"
+        />
 
-            {viewMode === 'period' && (
-              <>
-                <input
-                  type="date"
-                  value={filterByCreationDate ? creationDateRange.start : dateRange.start}
-                  onChange={(e) => {
-                    if (filterByCreationDate) {
-                      setCreationDateRange({ ...creationDateRange, start: e.target.value });
-                    } else {
-                      setDateRange({ ...dateRange, start: e.target.value });
-                    }
-                  }}
-                  className="p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Start date"
-                />
-                <input
-                  type="date"
-                  value={filterByCreationDate ? creationDateRange.end : dateRange.end}
-                  onChange={(e) => {
-                    if (filterByCreationDate) {
-                      setCreationDateRange({ ...creationDateRange, end: e.target.value });
-                    } else {
-                      setDateRange({ ...dateRange, end: e.target.value });
-                    }
-                  }}
-                  className="p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="End date"
-                />
-              </>
-            )}
-          </div>
-        </div>
+        <Combobox
+          options={referralOptions}
+          value={referralSource || 'all'}
+          onChange={(val) => setReferralSource(val === 'all' ? '' : val as ReferralSource)}
+          placeholder="All Referral Sources"
+          searchPlaceholder="Search source..."
+          className="w-full sm:w-64"
+        />
+
+        <Combobox
+          options={amountStatusOptions}
+          value={amountReceivedFilter}
+          onChange={(val) => setAmountReceivedFilter(val as 'all' | 'received' | 'not-received')}
+          placeholder="All Amount Status"
+          searchPlaceholder="Search..."
+          className="w-full sm:w-64"
+        />
+
+        {/* Date Filtering Options */}
+        <DateFilter
+          label="Follow-up Date"
+          icon={<CalendarIcon className="h-3.5 w-3.5" />}
+          value={followUpFilter}
+          onChange={setFollowUpFilter}
+          dateRange={followUpDateRange}
+          onDateRangeChange={setFollowUpDateRange}
+          className="w-full sm:w-64"
+        />
+
+        <DateFilter
+          label="Creation Date"
+          icon={<Plus className="h-3.5 w-3.5" />}
+          value={creationFilter}
+          onChange={setCreationFilter}
+          dateRange={creationDateRange}
+          onDateRangeChange={setCreationDateRange}
+          className="w-full sm:w-64"
+        />
       </div>
     </div>
   );

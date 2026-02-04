@@ -1,46 +1,53 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
 import { useCustomers } from '../context/CustomerContext';
 import { InventoryProvider, useInventory } from '../context/InventoryContext';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
-import { 
-  ArrowLeft, 
-  TrendingUp, 
-  Users, 
-  Package, 
-  DollarSign, 
-  Calendar,
-  BarChart3,
-  PieChart,
-  Activity,
-  Target,
-  Clock,
-  ShoppingCart,
-  AlertTriangle,
-  Filter,
+import {
+  ArrowLeft,
   Download,
-  UserCheck
+  Calendar,
+  Filter,
+  BarChart3,
+  TrendingUp,
+  Users,
+  Package,
+  DollarSign,
+  Activity,
+  UserCheck,
+  ShoppingCart,
+  PieChart,
+  Target
 } from 'lucide-react';
-import { parseISO, format, isThisMonth, isThisWeek, isToday, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { parseISO, format, isThisMonth, startOfMonth, endOfMonth, eachDayOfInterval, subDays, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import * as XLSX from 'xlsx';
 
 const AnalyticsContent: React.FC = () => {
   const navigate = useNavigate();
   const { customers, salesPersons, loading: salesLoading, error: salesError } = useCustomers();
   const { products, salesEntries, loading: inventoryLoading, error: inventoryError } = useInventory();
-  
+
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [activeTab, setActiveTab] = useState<'overview' | 'daily-sales'>('overview');
-  
+
   // Daily Sales specific states
   const [dailySalesStartDate, setDailySalesStartDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() - 30); // Default to last 30 days
     return format(date, 'yyyy-MM-dd');
   });
-  
+
   const [dailySalesEndDate, setDailySalesEndDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('');
   const [salesTypeFilter, setSalesTypeFilter] = useState<'all' | 'follow-up' | 'inventory'>('all');
@@ -53,13 +60,13 @@ const AnalyticsContent: React.FC = () => {
     const completedSales = customers.filter(customer =>
       customer.followUps.some(followUp => followUp.status === 'Sales completed')
     );
-    
+
     const rejectedSales = customers.filter(customer =>
       customer.followUps.some(followUp => followUp.status === 'Sales rejected')
     );
 
     const pendingSales = customers.filter(customer =>
-      customer.followUps.every(followUp => 
+      customer.followUps.every(followUp =>
         followUp.status !== 'Sales completed' && followUp.status !== 'Sales rejected'
       )
     );
@@ -77,7 +84,7 @@ const AnalyticsContent: React.FC = () => {
 
     // Calculate average deal size
     const completedSalesWithAmount = customers.reduce((total, customer) => {
-      return total + customer.followUps.filter(followUp => 
+      return total + customer.followUps.filter(followUp =>
         followUp.status === 'Sales completed' && followUp.salesAmount && followUp.salesAmount > 0
       ).length;
     }, 0);
@@ -110,17 +117,17 @@ const AnalyticsContent: React.FC = () => {
       const rejectedSales = personCustomers.filter(customer =>
         customer.followUps.some(followUp => followUp.status === 'Sales rejected')
       );
-      
+
       // Calculate revenue for this sales person
       const revenue = personCustomers.reduce((total, customer) => {
         return total + customer.followUps
           .filter(followUp => followUp.status === 'Sales completed' && followUp.salesAmount)
           .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
       }, 0);
-      
+
       const conversionRate = personCustomers.length > 0 ? (completedSales.length / personCustomers.length * 100) : 0;
       const averageDealSize = completedSales.length > 0 ? revenue / completedSales.length : 0;
-      
+
       return {
         name: person.name,
         totalCustomers: personCustomers.length,
@@ -163,7 +170,7 @@ const AnalyticsContent: React.FC = () => {
   const getTimeBasedAnalytics = () => {
     const now = new Date();
     const startDate = selectedPeriod === 'week' ? subDays(now, 7) :
-                     selectedPeriod === 'month' ? startOfMonth(now) : new Date(2024, 0, 1);
+      selectedPeriod === 'month' ? startOfMonth(now) : new Date(2024, 0, 1);
     const endDate = selectedPeriod === 'month' ? endOfMonth(now) : now;
 
     const filteredSales = salesEntries.filter(entry => {
@@ -181,10 +188,10 @@ const AnalyticsContent: React.FC = () => {
       return total + customer.followUps
         .filter(followUp => {
           const followUpDate = parseISO(followUp.date);
-          return followUp.status === 'Sales completed' && 
-                 followUp.salesAmount && 
-                 followUpDate >= startDate && 
-                 followUpDate <= endDate;
+          return followUp.status === 'Sales completed' &&
+            followUp.salesAmount &&
+            followUpDate >= startDate &&
+            followUpDate <= endDate;
         })
         .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
     }, 0);
@@ -200,7 +207,7 @@ const AnalyticsContent: React.FC = () => {
           .filter(followUp => followUp.date === dayStr && followUp.status === 'Sales completed' && followUp.salesAmount)
           .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
       }, 0);
-      
+
       return {
         date: format(day, 'MMM dd'),
         fullDate: dayStr,
@@ -213,7 +220,7 @@ const AnalyticsContent: React.FC = () => {
     // Calculate growth trends
     const recentData = dailyData.slice(-7);
     const previousData = dailyData.slice(-14, -7);
-    
+
     const recentAvg = recentData.reduce((sum, day) => sum + day.sales, 0) / recentData.length;
     const previousAvg = previousData.reduce((sum, day) => sum + day.sales, 0) / previousData.length;
     const growthTrend = previousAvg > 0 ? ((recentAvg - previousAvg) / previousAvg * 100) : 0;
@@ -233,10 +240,10 @@ const AnalyticsContent: React.FC = () => {
     const productSales = products.map(product => {
       const productSalesEntries = salesEntries.filter(entry => entry.productId === product.id);
       const totalSold = productSalesEntries.reduce((sum, entry) => sum + entry.quantitySold, 0);
-      const recentSales = productSalesEntries.filter(entry => 
+      const recentSales = productSalesEntries.filter(entry =>
         isThisMonth(parseISO(entry.saleDate))
       ).reduce((sum, entry) => sum + entry.quantitySold, 0);
-      
+
       return {
         id: product.id,
         name: product.productName,
@@ -244,8 +251,8 @@ const AnalyticsContent: React.FC = () => {
         totalSold,
         recentSales,
         currentStock: product.quantityAvailable,
-        stockStatus: product.quantityAvailable === 0 ? 'Out of Stock' : 
-                    product.quantityAvailable <= 5 ? 'Low Stock' : 'In Stock',
+        stockStatus: product.quantityAvailable === 0 ? 'Out of Stock' :
+          product.quantityAvailable <= 5 ? 'Low Stock' : 'In Stock',
         revenue: totalSold,
         velocity: totalSold / Math.max(1, (totalSold + product.quantityAvailable))
       };
@@ -259,13 +266,13 @@ const AnalyticsContent: React.FC = () => {
   // Brand Performance Analysis
   const getBrandPerformance = () => {
     const brandMap = new Map();
-    
+
     products.forEach(product => {
       const brandId = product.brand.id;
       const brandName = product.brand.name;
       const productSales = salesEntries.filter(entry => entry.productId === product.id);
       const totalSold = productSales.reduce((sum, entry) => sum + entry.quantitySold, 0);
-      
+
       if (brandMap.has(brandId)) {
         const existing = brandMap.get(brandId);
         brandMap.set(brandId, {
@@ -290,9 +297,42 @@ const AnalyticsContent: React.FC = () => {
   };
 
   // Daily Sales Data Processing
+  interface FollowUpSale {
+    type: 'follow-up';
+    customerName: string;
+    mobile: string;
+    amount: number;
+    salesPerson: string;
+    remarks: string;
+    location: string;
+  }
+
+  interface InventorySale {
+    type: 'inventory';
+    customerName: string;
+    productName: string;
+    brandName: string;
+    modelNumber: string;
+    quantitySold: number;
+    billNumber?: string;
+    remarks: string;
+  }
+
+  interface DaySalesData {
+    date: string;
+    displayDate: string;
+    fullDate: string;
+    totalAmount: number;
+    followUpSalesCount: number;
+    inventorySalesCount: number;
+    followUpSales: FollowUpSale[];
+    inventorySales: InventorySale[];
+    salesPersons: Set<string>;
+  }
+
   const dailySalesData = React.useMemo(() => {
-    const salesMap = new Map();
-    
+    const salesMap = new Map<string, DaySalesData>();
+
     // Process follow-up sales
     customers.forEach(customer => {
       // Filter by sales person if selected
@@ -305,14 +345,14 @@ const AnalyticsContent: React.FC = () => {
           const followUpDate = parseISO(followUp.date);
           const startDateObj = parseISO(dailySalesStartDate);
           const endDateObj = parseISO(dailySalesEndDate);
-          
+
           // Check if follow-up date is within selected range
-          if (isWithinInterval(followUpDate, { 
-            start: startOfDay(startDateObj), 
-            end: endOfDay(endDateObj) 
+          if (isWithinInterval(followUpDate, {
+            start: startOfDay(startDateObj),
+            end: endOfDay(endDateObj)
           })) {
             const dateKey = format(followUpDate, 'yyyy-MM-dd');
-            
+
             if (!salesMap.has(dateKey)) {
               salesMap.set(dateKey, {
                 date: dateKey,
@@ -326,20 +366,22 @@ const AnalyticsContent: React.FC = () => {
                 salesPersons: new Set()
               });
             }
-            
+
             const dayData = salesMap.get(dateKey);
-            dayData.totalAmount += followUp.salesAmount;
-            dayData.followUpSalesCount += 1;
-            dayData.followUpSales.push({
-              type: 'follow-up',
-              customerName: customer.name,
-              mobile: customer.mobile,
-              amount: followUp.salesAmount,
-              salesPerson: customer.salesPerson.name,
-              remarks: followUp.remarks,
-              location: customer.location
-            });
-            dayData.salesPersons.add(customer.salesPerson.name);
+            if (dayData) {
+              dayData.totalAmount += followUp.salesAmount;
+              dayData.followUpSalesCount += 1;
+              dayData.followUpSales.push({
+                type: 'follow-up',
+                customerName: customer.name,
+                mobile: customer.mobile,
+                amount: followUp.salesAmount,
+                salesPerson: customer.salesPerson.name,
+                remarks: followUp.remarks,
+                location: customer.location
+              });
+              dayData.salesPersons.add(customer.salesPerson.name);
+            }
           }
         }
       });
@@ -350,14 +392,14 @@ const AnalyticsContent: React.FC = () => {
       const saleDate = parseISO(saleEntry.saleDate);
       const startDateObj = parseISO(dailySalesStartDate);
       const endDateObj = parseISO(dailySalesEndDate);
-      
-      if (isWithinInterval(saleDate, { 
-        start: startOfDay(startDateObj), 
-        end: endOfDay(endDateObj) 
+
+      if (isWithinInterval(saleDate, {
+        start: startOfDay(startDateObj),
+        end: endOfDay(endDateObj)
       })) {
         const dateKey = format(saleDate, 'yyyy-MM-dd');
         const product = products.find(p => p.id === saleEntry.productId);
-        
+
         if (!salesMap.has(dateKey)) {
           salesMap.set(dateKey, {
             date: dateKey,
@@ -371,19 +413,21 @@ const AnalyticsContent: React.FC = () => {
             salesPersons: new Set()
           });
         }
-        
+
         const dayData = salesMap.get(dateKey);
-        dayData.inventorySalesCount += 1;
-        dayData.inventorySales.push({
-          type: 'inventory',
-          customerName: saleEntry.customerName,
-          productName: product?.productName || 'Unknown Product',
-          brandName: product?.brand.name || 'Unknown Brand',
-          modelNumber: product?.modelNumber || '',
-          quantitySold: saleEntry.quantitySold,
-          billNumber: saleEntry.billNumber,
-          remarks: `${saleEntry.quantitySold} units of ${product?.productName || 'product'}`
-        });
+        if (dayData) {
+          dayData.inventorySalesCount += 1;
+          dayData.inventorySales.push({
+            type: 'inventory',
+            customerName: saleEntry.customerName,
+            productName: product?.productName || 'Unknown Product',
+            brandName: product?.brand.name || 'Unknown Brand',
+            modelNumber: product?.modelNumber || '',
+            quantitySold: saleEntry.quantitySold,
+            billNumber: saleEntry.billNumber,
+            remarks: `${saleEntry.quantitySold} units of ${product?.productName || 'product'}`
+          });
+        }
       }
     });
 
@@ -418,7 +462,7 @@ const AnalyticsContent: React.FC = () => {
     const totalUnitsFromInventory = dailySalesData.reduce((sum, day) => {
       return sum + day.inventorySales.reduce((daySum, sale) => daySum + (sale.quantitySold || 0), 0);
     }, 0);
-    
+
     return {
       totalRevenue,
       totalFollowUpSales,
@@ -443,7 +487,7 @@ const AnalyticsContent: React.FC = () => {
 
   const exportDailySalesToExcel = () => {
     const workbook = XLSX.utils.book_new();
-    
+
     // Daily Summary Sheet
     const summaryData = dailySalesData.map(day => ({
       'Date': day.fullDate,
@@ -456,12 +500,12 @@ const AnalyticsContent: React.FC = () => {
       'Average Sale Amount Formatted': day.followUpSalesCount > 0 ? formatCurrency(day.totalAmount / day.followUpSalesCount) : '₹0',
       'Sales Persons': Array.from(day.salesPersons).join(', ')
     }));
-    
+
     const summarySheet = XLSX.utils.json_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Daily Summary');
-    
+
     // Follow-up Sales Sheet
-    const followUpData: any[] = [];
+    const followUpData: Record<string, string | number>[] = [];
     dailySalesData.forEach(day => {
       day.followUpSales.forEach(sale => {
         followUpData.push({
@@ -477,12 +521,12 @@ const AnalyticsContent: React.FC = () => {
         });
       });
     });
-    
+
     const followUpSheet = XLSX.utils.json_to_sheet(followUpData);
     XLSX.utils.book_append_sheet(workbook, followUpSheet, 'Follow-up Sales');
-    
+
     // Inventory Sales Sheet
-    const inventoryData: any[] = [];
+    const inventoryData: Record<string, string | number>[] = [];
     dailySalesData.forEach(day => {
       day.inventorySales.forEach(sale => {
         inventoryData.push({
@@ -498,10 +542,10 @@ const AnalyticsContent: React.FC = () => {
         });
       });
     });
-    
+
     const inventorySheet = XLSX.utils.json_to_sheet(inventoryData);
     XLSX.utils.book_append_sheet(workbook, inventorySheet, 'Inventory Sales');
-    
+
     // Statistics Sheet
     const statsData = [
       {
@@ -540,10 +584,10 @@ const AnalyticsContent: React.FC = () => {
         'Formatted Value': dailySalesSummaryStats.activeDays.toString()
       }
     ];
-    
+
     const statsSheet = XLSX.utils.json_to_sheet(statsData);
     XLSX.utils.book_append_sheet(workbook, statsSheet, 'Statistics');
-    
+
     // Generate filename
     const filename = `Daily_Sales_Report_${dailySalesStartDate}_to_${dailySalesEndDate}.xlsx`;
     XLSX.writeFile(workbook, filename);
@@ -551,14 +595,12 @@ const AnalyticsContent: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-64">
-          <div className="text-center">
-            <LoadingSpinner size="lg" />
-            <p className="mt-4 text-gray-600">Loading analytics...</p>
-          </div>
+      <div className="flex justify-center items-center min-h-64">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-gray-600">Loading analytics...</p>
         </div>
-      </Layout>
+      </div>
     );
   }
 
@@ -570,633 +612,621 @@ const AnalyticsContent: React.FC = () => {
   const brandPerformance = getBrandPerformance();
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        {error && (
-          <ErrorMessage message={error} className="mb-4" />
-        )}
+    <div className="space-y-8 pb-12 animate-fadeIn">
+      {error && (
+        <ErrorMessage message={error} className="mb-6 rounded-2xl shadow-sm border-red-100" />
+      )}
 
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics Dashboard</h1>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center text-slate-500 hover:text-brand-600 font-bold transition-all duration-300 group"
+          >
+            <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mr-3 group-hover:scale-110 transition-transform">
+              <ArrowLeft className="h-4 w-4" />
+            </div>
+            <span className="text-sm tracking-tight uppercase tracking-widest hidden sm:inline">Back</span>
+          </button>
+          <div className="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Intelligence Hub</h1>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Performance & Operations Analytics</p>
           </div>
-          
-          <div className="flex items-center space-x-3">
-            {activeTab === 'daily-sales' && (
-              <button
-                onClick={exportDailySalesToExcel}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Excel
-              </button>
-            )}
-            {activeTab === 'overview' && (
+        </div>
+
+        <div className="flex items-center space-x-3">
+          {activeTab === 'daily-sales' && (
+            <button
+              onClick={exportDailySalesToExcel}
+              className="group flex items-center px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all duration-300 shadow-lg shadow-emerald-500/20 active:scale-95"
+            >
+              <Download className="h-4 w-4 mr-2 group-hover:-translate-y-1 transition-transform" />
+              <span>Export Report</span>
+            </button>
+          )}
+          {activeTab === 'overview' && (
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                <Calendar className="h-4 w-4 text-brand-500" />
+              </div>
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as 'week' | 'month' | 'all')}
-                className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500"
+                className="premium-input pl-10 pr-10 appearance-none bg-white cursor-pointer min-w-[160px]"
               >
-                <option value="week">Last 7 Days</option>
-                <option value="month">This Month</option>
-                <option value="all">All Time</option>
+                <option value="week">Past 7 Days</option>
+                <option value="month">Current Month</option>
+                <option value="all">Historical Data</option>
               </select>
-            )}
-          </div>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <Filter className="h-3.5 w-3.5 text-slate-400 group-hover:text-brand-500 transition-colors" />
+              </div>
+            </div>
+          )}
         </div>
+      </div>
 
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'overview'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <BarChart3 className="h-4 w-4" />
-                <span>Overview Analytics</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('daily-sales')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'daily-sales'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span>Daily Sales</span>
-              </div>
-            </button>
-          </nav>
-        </div>
+      {/* Tab Navigation */}
+      <div className="bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200/50 inline-flex">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center space-x-2.5 py-2.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'overview'
+            ? 'bg-white text-brand-600 shadow-md border border-slate-200/50'
+            : 'text-slate-500 hover:text-slate-900'
+            }`}
+        >
+          <BarChart3 className={`h-4 w-4 ${activeTab === 'overview' ? 'text-brand-500' : ''}`} />
+          <span className="uppercase tracking-widest">Global Insights</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('daily-sales')}
+          className={`flex items-center space-x-2.5 py-2.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'daily-sales'
+            ? 'bg-white text-brand-600 shadow-md border border-slate-200/50'
+            : 'text-slate-500 hover:text-slate-900'
+            }`}
+        >
+          <Calendar className={`h-4 w-4 ${activeTab === 'daily-sales' ? 'text-brand-500' : ''}`} />
+          <span className="uppercase tracking-widest">Transaction Log</span>
+        </button>
+      </div>
 
-        {/* Overview Analytics Tab */}
-        {activeTab === 'overview' && (
-          <>
-            {/* Enhanced Overview KPIs with Revenue */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3">
-          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-            <div className="flex items-center justify-between">
-              <Users className="h-6 w-6 text-blue-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-blue-600">{salesMetrics.totalCustomers}</div>
-                <div className="text-xs text-blue-600">Total Customers</div>
+      {/* Overview Analytics Tab */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Enhanced Overview KPIs with Revenue */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Customers', value: salesMetrics.totalCustomers, icon: <Users className="h-5 w-5" />, color: 'text-brand-600', bgColor: 'bg-brand-50' },
+              { label: 'Sales Completed', value: salesMetrics.completedSales, icon: <TrendingUp className="h-5 w-5" />, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+              { label: 'Total Revenue', value: formatCurrency(salesMetrics.totalRevenue), icon: <DollarSign className="h-5 w-5" />, color: 'text-slate-900', bgColor: 'bg-slate-100', isPrimary: true },
+              { label: 'Conversion Rate', value: `${salesMetrics.conversionRate}%`, icon: <Target className="h-5 w-5" />, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+              { label: 'Total products', value: inventoryMetrics.totalProducts, icon: <Package className="h-5 w-5" />, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+              { label: 'Units Sold', value: inventoryMetrics.totalSold, icon: <ShoppingCart className="h-5 w-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
+              { label: "Today's Actions", value: salesMetrics.todayFollowUps, icon: <Calendar className="h-5 w-5" />, color: 'text-rose-600', bgColor: 'bg-rose-50' },
+              { label: 'Avg Deal Size', value: formatCurrency(salesMetrics.averageDealSize), icon: <Activity className="h-5 w-5" />, color: 'text-teal-600', bgColor: 'bg-teal-50' }
+            ].map((kpi, i) => (
+              <div key={i} className={`premium-card p-5 group transition-all duration-300 ${kpi.isPrimary ? 'ring-4 ring-brand-500/5 border-brand-200' : ''}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`${kpi.color} ${kpi.bgColor} p-2.5 rounded-xl border border-current/10 transition-transform duration-300 group-hover:scale-110`}>
+                    {kpi.icon}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-black text-slate-900 tracking-tight truncate">
+                    {kpi.value}
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 transition-colors group-hover:text-slate-500">
+                    {kpi.label}
+                  </p>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
-          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-            <div className="flex items-center justify-between">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-green-600">{salesMetrics.completedSales}</div>
-                <div className="text-xs text-green-600">Sales Completed</div>
+          {/* Enhanced Charts Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Sales Trend Chart with Revenue */}
+            <div className="premium-card p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center">
+                  <div className="bg-brand-50 p-2 rounded-lg mr-3">
+                    <TrendingUp className="h-5 w-5 text-brand-600" />
+                  </div>
+                  Volume & Revenue Trends
+                </h3>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Revenue</span>
+                  </div>
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-2 h-2 rounded-full bg-brand-400"></div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sales</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="bg-emerald-50 rounded-lg p-3 border border-emerald-200">
-            <div className="flex items-center justify-between">
-              <DollarSign className="h-6 w-6 text-emerald-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-emerald-600">{formatCurrency(salesMetrics.totalRevenue)}</div>
-                <div className="text-xs text-emerald-600">Total Revenue</div>
-              </div>
-            </div>
-          </div>
+              <div className="space-y-6">
+                {timeBasedAnalytics.dailyData.map((day, index) => {
+                  const maxSales = Math.max(...timeBasedAnalytics.dailyData.map(d => d.sales), 1);
+                  const salesWidth = (day.sales / maxSales) * 100;
+                  const maxRevenue = Math.max(...timeBasedAnalytics.dailyData.map(d => d.revenue), 1);
+                  const revenueWidth = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
 
-          <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-            <div className="flex items-center justify-between">
-              <Target className="h-6 w-6 text-purple-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-purple-600">{salesMetrics.conversionRate}%</div>
-                <div className="text-xs text-purple-600">Conversion Rate</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-            <div className="flex items-center justify-between">
-              <Package className="h-6 w-6 text-orange-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-orange-600">{inventoryMetrics.totalProducts}</div>
-                <div className="text-xs text-orange-600">Total Products</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
-            <div className="flex items-center justify-between">
-              <ShoppingCart className="h-6 w-6 text-indigo-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-indigo-600">{inventoryMetrics.totalSold}</div>
-                <div className="text-xs text-indigo-600">Units Sold</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-red-50 rounded-lg p-3 border border-red-200">
-            <div className="flex items-center justify-between">
-              <Calendar className="h-6 w-6 text-red-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-red-600">{salesMetrics.todayFollowUps}</div>
-                <div className="text-xs text-red-600">Today's Follow-ups</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
-            <div className="flex items-center justify-between">
-              <Activity className="h-6 w-6 text-teal-600" />
-              <div className="text-right">
-                <div className="text-lg font-bold text-teal-600">{formatCurrency(salesMetrics.averageDealSize)}</div>
-                <div className="text-xs text-teal-600">Avg Deal Size</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Enhanced Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Sales Trend Chart with Revenue */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
-              Sales & Revenue Trend (Last 7 Days)
-            </h3>
-            <div className="space-y-4">
-              {timeBasedAnalytics.dailyData.map((day, index) => {
-                const maxSales = Math.max(...timeBasedAnalytics.dailyData.map(d => d.sales), 1);
-                const salesWidth = (day.sales / maxSales) * 100;
-                const maxRevenue = Math.max(...timeBasedAnalytics.dailyData.map(d => d.revenue), 1);
-                const revenueWidth = maxRevenue > 0 ? (day.revenue / maxRevenue) * 100 : 0;
-                
-                return (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">{day.date}</span>
-                      <div className="flex items-center space-x-4 text-sm">
-                        <span className="text-blue-600">{day.customers} customers</span>
-                        <span className="text-green-600">{day.sales} sales</span>
-                        <span className="text-emerald-600">{formatCurrency(day.revenue)}</span>
+                  return (
+                    <div key={index} className="group/item">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-black text-slate-500 uppercase tracking-tight">{day.date}</span>
+                        <div className="flex items-center space-x-4 text-[11px] font-black">
+                          <span className="text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-100">{day.sales} sales</span>
+                          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">{formatCurrency(day.revenue)}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 text-xs text-gray-500">Sales</div>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                      <div className="space-y-1.5">
+                        <div className="relative h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+                          <div
+                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all duration-500 group-hover/item:opacity-80"
                             style={{ width: `${salesWidth}%` }}
                           ></div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-16 text-xs text-gray-500">Revenue</div>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-emerald-500 h-2 rounded-full transition-all duration-300"
+                        <div className="relative h-1.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+                          <div
+                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-700 group-hover/item:opacity-80"
                             style={{ width: `${revenueWidth}%` }}
                           ></div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-600">
-                Period Revenue: <span className="font-semibold text-gray-900">{formatCurrency(timeBasedAnalytics.totalRevenue)}</span>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
+                  <span>Current Period Revenue</span>
+                  <span className="text-slate-900 font-black text-lg tracking-tight">{formatCurrency(timeBasedAnalytics.totalRevenue)}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Enhanced Sales Person Performance with Revenue */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Users className="h-5 w-5 mr-2 text-green-600" />
-              Sales Person Performance
-            </h3>
-            <div className="space-y-3">
-              {salesPersonPerformance.slice(0, 5).map((person, index) => (
-                <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                        index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-orange-500' : 'bg-blue-500'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div className="font-medium text-gray-900">{person.name}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-green-600">{formatCurrency(person.revenue)}</div>
-                      <div className="text-xs text-gray-600">{person.completedSales} sales</div>
-                    </div>
+            {/* Enhanced Sales Person Performance with Revenue */}
+            <div className="premium-card p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center">
+                  <div className="bg-indigo-50 p-2 rounded-lg mr-3">
+                    <Users className="h-5 w-5 text-indigo-600" />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="text-center p-1 bg-blue-100 rounded">
-                      <div className="font-semibold text-blue-600">{person.totalCustomers}</div>
-                      <div className="text-blue-600">Customers</div>
-                    </div>
-                    <div className="text-center p-1 bg-purple-100 rounded">
-                      <div className="font-semibold text-purple-600">{person.conversionRate.toFixed(1)}%</div>
-                      <div className="text-purple-600">Conv. Rate</div>
-                    </div>
-                    <div className="text-center p-1 bg-emerald-100 rounded">
-                      <div className="font-semibold text-emerald-600">{formatCurrency(person.averageDealSize)}</div>
-                      <div className="text-emerald-600">Avg Deal</div>
-                    </div>
-                  </div>
+                  Team Performance
+                </h3>
+                <div className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+                  Global Rank
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
+              </div>
 
-        {/* Additional Enhanced Analytics */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Top Products with Enhanced Metrics */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <Package className="h-5 w-5 mr-2 text-purple-600" />
-              Top Selling Products
-            </h3>
-            {topProducts.length > 0 ? (
-              <div className="space-y-3">
-                {topProducts.slice(0, 5).map((product, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <div className="font-medium text-gray-900 text-sm">{product.name}</div>
-                        <div className="text-xs text-gray-600">{product.brand}</div>
+              <div className="space-y-4">
+                {salesPersonPerformance.slice(0, 5).map((person, index) => (
+                  <div key={index} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 transition-all duration-300 hover:bg-white hover:shadow-md hover:border-brand-200 group/person">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shadow-sm border ${index === 0 ? 'bg-amber-100 border-amber-200 text-amber-700 ring-4 ring-amber-500/10' :
+                          index === 1 ? 'bg-slate-200 border-slate-300 text-slate-700' :
+                            index === 2 ? 'bg-orange-100 border-orange-200 text-orange-700' :
+                              'bg-white border-slate-100 text-slate-500'
+                          }`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900 text-sm group-hover/person:text-brand-600 transition-colors">{person.name}</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Revenue Driver</div>
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-purple-600">{product.totalSold}</div>
-                        <div className="text-xs text-gray-600">units sold</div>
+                        <div className="font-black text-slate-900 tracking-tight">{formatCurrency(person.revenue)}</div>
+                        <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 mt-1 inline-block">{person.completedSales} units</div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className={`px-2 py-1 rounded-full ${
-                        product.stockStatus === 'Out of Stock' ? 'bg-red-100 text-red-600' :
-                        product.stockStatus === 'Low Stock' ? 'bg-orange-100 text-orange-600' :
-                        'bg-green-100 text-green-600'
-                      }`}>
-                        {product.stockStatus}
-                      </span>
-                      <span className="text-gray-600">{product.currentStock} in stock</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No sales data available yet</p>
-              </div>
-            )}
-          </div>
-
-          {/* Enhanced Inventory Status */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <PieChart className="h-5 w-5 mr-2 text-orange-600" />
-              Inventory Status
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-green-800 font-medium">In Stock</span>
-                </div>
-                <span className="text-green-600 font-bold">{inventoryMetrics.inStockProducts}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span className="text-orange-800 font-medium">Low Stock</span>
-                </div>
-                <span className="text-orange-600 font-bold">{inventoryMetrics.lowStockProducts}</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span className="text-red-800 font-medium">Out of Stock</span>
-                </div>
-                <span className="text-red-600 font-bold">{inventoryMetrics.outOfStockProducts}</span>
-              </div>
-              <div className="border-t pt-3">
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="p-2 bg-blue-50 rounded">
-                    <div className="text-lg font-bold text-blue-600">{inventoryMetrics.totalStock}</div>
-                    <div className="text-xs text-blue-600">Total Units</div>
-                  </div>
-                  <div className="p-2 bg-purple-50 rounded">
-                    <div className="text-lg font-bold text-purple-600">{inventoryMetrics.stockTurnover}%</div>
-                    <div className="text-xs text-purple-600">Turnover</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Brand Performance */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center">
-              <BarChart3 className="h-5 w-5 mr-2 text-indigo-600" />
-              Brand Performance
-            </h3>
-            {brandPerformance.length > 0 ? (
-              <div className="space-y-3">
-                {brandPerformance.map((brand, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="font-medium text-gray-900">{brand.name}</div>
-                      <div className="text-right">
-                        <div className="font-bold text-indigo-600">{brand.totalSold}</div>
-                        <div className="text-xs text-gray-600">units sold</div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-100 text-center">
+                        <div className="text-xs font-black text-slate-900">{person.totalCustomers}</div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Reach</div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="text-center p-1 bg-blue-100 rounded">
-                        <div className="font-semibold text-blue-600">{brand.totalProducts}</div>
-                        <div className="text-blue-600">Products</div>
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-100 text-center">
+                        <div className="text-xs font-black text-brand-600">{person.conversionRate.toFixed(1)}%</div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Impact</div>
                       </div>
-                      <div className="text-center p-1 bg-green-100 rounded">
-                        <div className="font-semibold text-green-600">{brand.totalStock}</div>
-                        <div className="text-green-600">In Stock</div>
+                      <div className="p-2.5 bg-white rounded-xl border border-slate-100 text-center">
+                        <div className="text-xs font-black text-emerald-600 truncate">{formatCurrency(person.averageDealSize)}</div>
+                        <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Ticket</div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No brand data available yet</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Summary Insights with Revenue */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900">Key Insights</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex items-center space-x-2 mb-2">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
-                <span className="font-medium text-gray-900">Revenue Performance</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                Total revenue of {formatCurrency(salesMetrics.totalRevenue)} with an average deal size of {formatCurrency(salesMetrics.averageDealSize)}.
-              </p>
-            </div>
-            
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex items-center space-x-2 mb-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <span className="font-medium text-gray-900">Sales Performance</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                {salesMetrics.conversionRate}% conversion rate with {salesMetrics.completedSales} successful sales out of {salesMetrics.totalCustomers} total customers.
-              </p>
-            </div>
-            
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex items-center space-x-2 mb-2">
-                <Package className="h-5 w-5 text-orange-600" />
-                <span className="font-medium text-gray-900">Inventory Health</span>
-              </div>
-              <p className="text-sm text-gray-600">
-                {inventoryMetrics.stockTurnover}% stock turnover with {inventoryMetrics.lowStockProducts + inventoryMetrics.outOfStockProducts} items needing attention.
-              </p>
             </div>
           </div>
-        </div>
-          </>
-        )}
 
-        {/* Daily Sales Tab */}
-        {activeTab === 'daily-sales' && (
-          <>
-            {/* Daily Sales Filters */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                  <input
-                    type="date"
-                    value={dailySalesStartDate}
-                    onChange={(e) => setDailySalesStartDate(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                  <input
-                    type="date"
-                    value={dailySalesEndDate}
-                    onChange={(e) => setDailySalesEndDate(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sales Person</label>
-                  <select
-                    value={selectedSalesPerson}
-                    onChange={(e) => setSelectedSalesPerson(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Sales Persons</option>
-                    {salesPersons.map((person) => (
-                      <option key={person.id} value={person.id}>
-                        {person.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sales Type</label>
-                  <select
-                    value={salesTypeFilter}
-                    onChange={(e) => setSalesTypeFilter(e.target.value as 'all' | 'follow-up' | 'inventory')}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All Sales</option>
-                    <option value="follow-up">Follow-up Sales Only</option>
-                    <option value="inventory">Inventory Sales Only</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <div className="text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Filter className="h-4 w-4 mr-1" />
-                      {dailySalesData.length} days found
+          {/* Additional Enhanced Analytics */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top Products with Enhanced Metrics */}
+            <div className="premium-card p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center">
+                  <div className="bg-purple-50 p-2 rounded-lg mr-3">
+                    <Package className="h-5 w-5 text-purple-600" />
+                  </div>
+                  Market Leaders
+                </h3>
+              </div>
+
+              {topProducts.length > 0 ? (
+                <div className="space-y-4">
+                  {topProducts.slice(0, 5).map((product, index) => (
+                    <div key={index} className="group/product p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 hover:bg-white hover:shadow-md hover:border-purple-200 transition-all duration-300">
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex-1 min-w-0 pr-4">
+                          <div className="font-bold text-slate-900 text-sm truncate group-hover/product:text-purple-600 transition-colors uppercase tracking-tight">{product.name}</div>
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{product.brand}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-black text-purple-600 text-lg leading-none">{product.totalSold}</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Units Sold</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100/50">
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border ${product.stockStatus === 'Out of Stock' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                          product.stockStatus === 'Low Stock' ? 'bg-amber-50 text-amber-600 border-amber-100' :
+                            'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          }`}>
+                          {product.stockStatus}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-500">{product.currentStock} in inventory</span>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Daily Sales Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
-              <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
-                <div className="flex items-center justify-between">
-                  <DollarSign className="h-6 w-6 text-emerald-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-emerald-600">
-                      {formatCurrency(dailySalesSummaryStats.totalRevenue)}
-                    </div>
-                    <div className="text-xs text-emerald-600">Revenue</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="flex items-center justify-between">
-                  <UserCheck className="h-6 w-6 text-blue-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-blue-600">{dailySalesSummaryStats.totalFollowUpSales}</div>
-                    <div className="text-xs text-blue-600">Follow-up Sales</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                <div className="flex items-center justify-between">
-                  <Package className="h-6 w-6 text-purple-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-purple-600">{dailySalesSummaryStats.totalInventorySales}</div>
-                    <div className="text-xs text-purple-600">Inventory Sales</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                <div className="flex items-center justify-between">
-                  <ShoppingCart className="h-6 w-6 text-orange-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-orange-600">{dailySalesSummaryStats.totalUnitsFromInventory}</div>
-                    <div className="text-xs text-orange-600">Units Sold</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
-                <div className="flex items-center justify-between">
-                  <Calendar className="h-6 w-6 text-teal-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-teal-600">{dailySalesSummaryStats.activeDays}</div>
-                    <div className="text-xs text-teal-600">Active Days</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-                <div className="flex items-center justify-between">
-                  <DollarSign className="h-6 w-6 text-indigo-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-indigo-600">
-                      {formatCurrency(dailySalesSummaryStats.averageDailyRevenue)}
-                    </div>
-                    <div className="text-xs text-indigo-600">Avg Daily Revenue</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-pink-50 rounded-lg p-4 border border-pink-200">
-                <div className="flex items-center justify-between">
-                  <TrendingUp className="h-6 w-6 text-pink-600" />
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-pink-600">
-                      {formatCurrency(dailySalesSummaryStats.averageSaleAmount)}
-                    </div>
-                    <div className="text-xs text-pink-600">Avg Sale Amount</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Daily Sales List */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Daily Sales Breakdown</h3>
-              </div>
-              
-              {dailySalesData.length === 0 ? (
-                <div className="text-center py-12">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-gray-500">No sales found for the selected period and filters.</p>
+                  ))}
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
-                  {dailySalesData.map((day) => (
-                    <div key={day.date} className="p-6 hover:bg-gray-50 transition-colors">
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4">
-                        <div>
-                          <h4 className="text-lg font-semibold text-gray-900">{day.fullDate}</h4>
-                          <p className="text-sm text-gray-600">
-                            {day.followUpSalesCount} follow-up sales • {day.inventorySalesCount} inventory sales
-                            {day.salesPersons.size > 0 && ` • ${Array.from(day.salesPersons).join(', ')}`}
-                          </p>
-                        </div>
-                        <div className="text-right mt-2 lg:mt-0">
-                          <div className="text-2xl font-bold text-emerald-600">
-                            {formatCurrency(day.totalAmount)}
-                          </div>
-                          {day.followUpSalesCount > 0 && (
-                            <div className="text-sm text-gray-600">
-                              Avg: {formatCurrency(day.totalAmount / day.followUpSalesCount)}
-                            </div>
-                          )}
+                <div className="text-center py-16">
+                  <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                    <Package className="h-8 w-8 text-slate-200" />
+                  </div>
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">No activity recorded</p>
+                </div>
+              )}
+            </div>
+
+            {/* Enhanced Inventory Status */}
+            <div className="premium-card p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center">
+                  <div className="bg-orange-50 p-2 rounded-lg mr-3">
+                    <PieChart className="h-5 w-5 text-orange-600" />
+                  </div>
+                  Stock Composition
+                </h3>
+              </div>
+
+              <div className="space-y-4">
+                {[
+                  { label: 'Healthy Stock', value: inventoryMetrics.inStockProducts, color: 'bg-emerald-500', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700', borderColor: 'border-emerald-100' },
+                  { label: 'Critical Supply', value: inventoryMetrics.lowStockProducts, color: 'bg-amber-500', bgColor: 'bg-amber-50', textColor: 'text-amber-700', borderColor: 'border-amber-100' },
+                  { label: 'Depleted Stock', value: inventoryMetrics.outOfStockProducts, color: 'bg-rose-500', bgColor: 'bg-rose-50', textColor: 'text-rose-700', borderColor: 'border-rose-100' }
+                ].map((item, i) => (
+                  <div key={i} className={`flex items-center justify-between p-4 ${item.bgColor} rounded-2xl border ${item.borderColor} group/item transition-all duration-300 hover:scale-[1.02]`}>
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 ${item.color} rounded-full ring-4 ring-white shadow-sm`}></div>
+                      <span className={`${item.textColor} font-black text-xs uppercase tracking-widest`}>{item.label}</span>
+                    </div>
+                    <span className={`${item.textColor} font-black text-lg tracking-tight`}>{item.value}</span>
+                  </div>
+                ))}
+
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                      <div className="text-xl font-black text-slate-900 tracking-tight">{inventoryMetrics.totalStock}</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Global Units</div>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                      <div className="text-xl font-black text-purple-600 tracking-tight">{inventoryMetrics.stockTurnover}%</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Velocity</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Brand Performance */}
+            <div className="premium-card p-6 sm:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900 tracking-tight flex items-center">
+                  <div className="bg-indigo-50 p-2 rounded-lg mr-3">
+                    <BarChart3 className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  Brand Portfolio
+                </h3>
+              </div>
+
+              {brandPerformance.length > 0 ? (
+                <div className="space-y-4">
+                  {brandPerformance.map((brand, index) => (
+                    <div key={index} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 hover:bg-white transition-all duration-300 group/brand">
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="font-black text-slate-900 text-sm group-hover/brand:text-brand-600 transition-colors uppercase tracking-tight">{brand.name}</div>
+                        <div className="text-right">
+                          <div className="font-black text-indigo-600 text-base">{brand.totalSold}</div>
+                          <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Units</div>
                         </div>
                       </div>
-                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SKUs</span>
+                          <span className="text-xs font-black text-slate-900">{brand.totalProducts}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Held</span>
+                          <span className="text-xs font-black text-emerald-600">{brand.totalStock}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                    <BarChart3 className="h-8 w-8 text-slate-200" />
+                  </div>
+                  <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Awaiting data</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Summary Insights with Revenue */}
+          <div className="bg-gradient-to-br from-brand-600 to-indigo-700 rounded-3xl p-8 sm:p-10 text-white shadow-2xl shadow-brand-500/20 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl transition-all duration-500 group-hover:bg-white/10"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-400/10 rounded-full -ml-24 -mb-24 blur-2xl"></div>
+
+            <h3 className="text-2xl font-black mb-10 relative z-10 flex items-center uppercase tracking-tight">
+              <Activity className="h-6 w-6 mr-3 text-brand-300" />
+              Strategic Intelligence
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-white/20 p-2 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-emerald-300" />
+                  </div>
+                  <span className="font-black text-xs uppercase tracking-widest text-brand-100">Revenue Alpha</span>
+                </div>
+                <p className="text-sm text-brand-50 leading-relaxed font-medium">
+                  Direct revenue generation stands at <span className="font-black text-white">{formatCurrency(salesMetrics.totalRevenue)}</span> with an average ticket size of <span className="font-black text-white">{formatCurrency(salesMetrics.averageDealSize)}</span>.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-white/20 p-2 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-emerald-300" />
+                  </div>
+                  <span className="font-black text-xs uppercase tracking-widest text-brand-100">Conversion Velocity</span>
+                </div>
+                <p className="text-sm text-brand-50 leading-relaxed font-medium">
+                  Current conversion efficiency is <span className="font-black text-white">{salesMetrics.conversionRate}%</span>, securing <span className="font-black text-white">{salesMetrics.completedSales}</span> successful closures.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:bg-white/20 transition-all duration-300">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-white/20 p-2 rounded-lg">
+                    <Package className="h-5 w-5 text-orange-300" />
+                  </div>
+                  <span className="font-black text-xs uppercase tracking-widest text-brand-100">Supply Health</span>
+                </div>
+                <p className="text-sm text-brand-50 leading-relaxed font-medium">
+                  Portfolio maintains a <span className="font-black text-white">{inventoryMetrics.stockTurnover}%</span> turnover rate. <span className="font-black text-white">{inventoryMetrics.lowStockProducts + inventoryMetrics.outOfStockProducts}</span> items require replenishment.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Daily Sales Tab */}
+      {activeTab === 'daily-sales' && (
+        <>
+          <div className="bg-white/50 backdrop-blur-sm rounded-3xl p-6 border border-slate-200/50 shadow-sm mb-8 animate-fadeIn">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+              <div className="space-y-2">
+                <Label htmlFor="start-date" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Period Start</Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+                    <Calendar className="h-4 w-4 text-brand-500" />
+                  </div>
+                  <Input
+                    id="start-date"
+                    type="date"
+                    value={dailySalesStartDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDailySalesStartDate(e.target.value)}
+                    className="h-11 pl-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 w-full"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="end-date" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Period End</Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+                    <Calendar className="h-4 w-4 text-brand-500" />
+                  </div>
+                  <Input
+                    id="end-date"
+                    type="date"
+                    value={dailySalesEndDate}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDailySalesEndDate(e.target.value)}
+                    className="h-11 pl-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 w-full"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Assigned Agent</Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+                    <Users className="h-4 w-4 text-brand-500" />
+                  </div>
+                  <Select
+                    value={selectedSalesPerson || "all"}
+                    onValueChange={(value) => setSelectedSalesPerson(value === "all" ? "" : value)}
+                  >
+                    <SelectTrigger className="h-11 pl-10 bg-white border-slate-200 rounded-xl focus:ring-brand-500/20 focus:border-brand-500 w-full">
+                      <SelectValue placeholder="Global Coverage" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Global Coverage</SelectItem>
+                      {salesPersons.map((person) => (
+                        <SelectItem key={person.id} value={person.id}>
+                          {person.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Revenue Channel</Label>
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+                    <Activity className="h-4 w-4 text-brand-500" />
+                  </div>
+                  <Select
+                    value={salesTypeFilter}
+                    onValueChange={(value) => setSalesTypeFilter(value as 'all' | 'follow-up' | 'inventory')}
+                  >
+                    <SelectTrigger className="h-11 pl-10 bg-white border-slate-200 rounded-xl focus:ring-brand-500/20 focus:border-brand-500 w-full">
+                      <SelectValue placeholder="Unified Revenue" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Unified Revenue</SelectItem>
+                      <SelectItem value="follow-up">Follow-up Sales</SelectItem>
+                      <SelectItem value="inventory">Shop Floor Sales</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Sales Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              { label: 'Period Revenue', value: formatCurrency(dailySalesSummaryStats.totalRevenue), icon: <DollarSign className="h-5 w-5" />, color: 'text-brand-600', bgColor: 'bg-brand-50', isPrimary: true },
+              { label: 'Agent Closures', value: dailySalesSummaryStats.totalFollowUpSales, icon: <UserCheck className="h-5 w-5" />, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+              { label: 'Retail Orders', value: dailySalesSummaryStats.totalInventorySales, icon: <Package className="h-5 w-5" />, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+              { label: 'Units Liquidated', value: dailySalesSummaryStats.totalUnitsFromInventory, icon: <ShoppingCart className="h-5 w-5" />, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+              { label: 'Operational Days', value: dailySalesSummaryStats.activeDays, icon: <Calendar className="h-5 w-5" />, color: 'text-teal-600', bgColor: 'bg-teal-50' },
+              { label: 'Daily Average', value: formatCurrency(dailySalesSummaryStats.averageDailyRevenue), icon: <TrendingUp className="h-5 w-5" />, color: 'text-indigo-600', bgColor: 'bg-indigo-50' },
+              { label: 'Ticket Alpha', value: formatCurrency(dailySalesSummaryStats.averageSaleAmount), icon: <Activity className="h-5 w-5" />, color: 'text-rose-600', bgColor: 'bg-rose-50' }
+            ].map((kpi, i) => (
+              <div key={i} className={`premium-card p-5 group transition-all duration-300 ${kpi.isPrimary ? 'ring-4 ring-brand-500/5 border-brand-200 lg:col-span-2' : ''} ${i === 6 ? 'lg:col-span-1' : ''}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`${kpi.color} ${kpi.bgColor} p-2.5 rounded-xl border border-current/10 transition-transform duration-300 group-hover:scale-110`}>
+                    {kpi.icon}
+                  </div>
+                </div>
+                <div>
+                  <div className={`${kpi.isPrimary ? 'text-3xl' : 'text-xl'} font-black text-slate-900 tracking-tight truncate`}>
+                    {kpi.value}
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 transition-colors group-hover:text-slate-500">
+                    {kpi.label}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Daily Sales List */}
+          <div className="animate-fadeIn [animation-delay:200ms]">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase tracking-widest">Chronological Ledger</h3>
+              <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest border border-slate-200 uppercase">
+                {dailySalesData.length} records active
+              </div>
+            </div>
+
+            {dailySalesData.length === 0 ? (
+              <div className="premium-card py-20 text-center border-dashed">
+                <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100 shadow-inner">
+                  <Calendar className="h-10 w-10 text-slate-200" />
+                </div>
+                <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">No transaction data identified</p>
+                <p className="text-slate-400 text-xs mt-2">Try adjusting your filters or date range</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {dailySalesData.map((day: DaySalesData) => (
+                  <div key={day.date} className="premium-card overflow-hidden group/day">
+                    <div className="px-8 py-6 bg-slate-50/50 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 group-hover/day:scale-110 transition-transform duration-500">
+                          <Calendar className="h-5 w-5 text-brand-500" />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-black text-slate-900 tracking-tight">{day.fullDate}</h4>
+                          <div className="flex items-center space-x-3 mt-1">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-slate-100">{day.followUpSalesCount} agent closures</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-2 py-0.5 rounded border border-slate-100">{day.inventorySalesCount} retail orders</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-left lg:text-right">
+                        <div className="text-2xl font-black text-emerald-600 tracking-tight">
+                          {formatCurrency(day.totalAmount)}
+                        </div>
+                        {day.followUpSalesCount > 0 && (
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                            Unit Avg: {formatCurrency(day.totalAmount / day.followUpSalesCount)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-8 space-y-8">
                       {/* Follow-up Sales */}
                       {day.followUpSales.length > 0 && (
-                        <div className="mb-4">
-                          <h5 className="text-sm font-medium text-blue-700 mb-2 flex items-center">
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            Follow-up Sales ({day.followUpSales.length})
-                          </h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {day.followUpSales.map((sale, index) => (
-                              <div key={index} className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <div className="font-medium text-gray-900">{sale.customerName}</div>
-                                    <div className="text-sm text-gray-600">{sale.mobile}</div>
-                                    <div className="text-xs text-gray-500">{sale.location}</div>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="font-bold text-emerald-600">
-                                      {formatCurrency(sale.amount)}
+                        <div>
+                          <div className="flex items-center space-x-2 mb-4">
+                            <div className="h-1 w-6 bg-brand-500 rounded-full"></div>
+                            <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest flex items-center">
+                              <UserCheck className="h-3.5 w-3.5 mr-1.5" />
+                              Client Execution
+                            </h5>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {day.followUpSales.map((sale: FollowUpSale, index: number) => (
+                              <div key={index} className="bg-white rounded-2xl p-4 border border-slate-100 hover:border-brand-200 transition-all duration-300 hover:shadow-lg hover:shadow-brand-500/5 group/sale">
+                                <div className="flex justify-between items-start mb-4">
+                                  <div className="min-w-0 flex-1 pr-2">
+                                    <div className="font-black text-slate-900 text-sm truncate uppercase tracking-tight">{sale.customerName}</div>
+                                    <div className="text-[10px] font-bold text-slate-400 mt-1 flex items-center">
+                                      {sale.mobile}
                                     </div>
                                   </div>
+                                  <div className="font-black text-emerald-600 text-sm whitespace-nowrap bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                                    {formatCurrency(sale.amount)}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-gray-600">
-                                  Sales: {sale.salesPerson}
+                                <div className="flex items-center justify-between text-[10px] font-black text-slate-500 uppercase tracking-widest pt-3 border-t border-slate-50">
+                                  <span className="flex items-center text-brand-600 bg-brand-50 px-2 py-0.5 rounded">
+                                    <Users className="h-3 w-3 mr-1" />
+                                    {sale.salesPerson}
+                                  </span>
+                                  <span className="text-slate-400 truncate max-w-[100px]">{sale.location}</span>
                                 </div>
                                 {sale.remarks && (
-                                  <div className="text-xs text-gray-500 mt-1 truncate">
-                                    {sale.remarks}
+                                  <div className="text-[10px] italic text-slate-400 mt-3 p-2 bg-slate-50 rounded-lg group-hover/sale:bg-white transition-colors border border-transparent group-hover/sale:border-slate-100 line-clamp-2">
+                                    "{sale.remarks}"
                                   </div>
                                 )}
                               </div>
@@ -1204,35 +1234,38 @@ const AnalyticsContent: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {/* Inventory Sales */}
                       {day.inventorySales.length > 0 && (
                         <div>
-                          <h5 className="text-sm font-medium text-purple-700 mb-2 flex items-center">
-                            <Package className="h-4 w-4 mr-1" />
-                            Inventory Sales ({day.inventorySales.length})
-                          </h5>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {day.inventorySales.map((sale, index) => (
-                              <div key={index} className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <div className="font-medium text-gray-900">{sale.customerName}</div>
-                                    <div className="text-sm text-gray-600">{sale.productName}</div>
-                                    <div className="text-xs text-gray-500">{sale.brandName} - {sale.modelNumber}</div>
+                          <div className="flex items-center space-x-2 mb-4">
+                            <div className="h-1 w-6 bg-purple-500 rounded-full"></div>
+                            <h5 className="text-[10px] font-black text-purple-600 uppercase tracking-widest flex items-center">
+                              <Package className="h-3.5 w-3.5 mr-1.5" />
+                              Retail Performance
+                            </h5>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {day.inventorySales.map((sale: InventorySale, index: number) => (
+                              <div key={index} className="bg-slate-50/30 rounded-2xl p-4 border border-slate-100 hover:border-purple-200 transition-all duration-300 hover:bg-white group/retail">
+                                <div className="flex justify-between items-start mb-4">
+                                  <div className="min-w-0 flex-1 pr-2">
+                                    <div className="font-black text-slate-900 text-xs truncate group-hover/retail:text-purple-600 transition-colors uppercase tracking-tight">{sale.productName}</div>
+                                    <div className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{sale.brandName} • {sale.modelNumber}</div>
                                   </div>
-                                  <div className="text-right">
-                                    <div className="font-bold text-purple-600">
-                                      {sale.quantitySold} units
-                                    </div>
+                                  <div className="font-black text-purple-600 text-xs bg-purple-50 px-2 py-1 rounded transition-colors group-hover/retail:bg-purple-100">
+                                    {sale.quantitySold} units
                                   </div>
                                 </div>
-                                {sale.billNumber && (
-                                  <div className="text-xs text-gray-600">
-                                    Bill: {sale.billNumber}
-                                  </div>
-                                )}
-                                <div className="text-xs text-gray-500 mt-1">
+                                <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest pt-3 border-t border-slate-100">
+                                  <span className="text-slate-900 truncate max-w-[120px]">{sale.customerName}</span>
+                                  {sale.billNumber && (
+                                    <span className="text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-100 font-mono">
+                                      #{sale.billNumber}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-3 bg-white/50 p-2 rounded-lg border border-slate-50 italic">
                                   {sale.remarks}
                                 </div>
                               </div>
@@ -1241,14 +1274,14 @@ const AnalyticsContent: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-    </Layout>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 

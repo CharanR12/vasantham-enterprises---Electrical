@@ -1,5 +1,7 @@
-import { supabase } from '../lib/supabase';
+import { supabase, createClerkSupabaseClient } from '../lib/supabase';
 import { Customer, SalesPerson, FollowUp, FollowUpStatus, ReferralSource } from '../types';
+
+const getClient = (token?: string) => token ? createClerkSupabaseClient(token) : supabase;
 
 class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -17,15 +19,22 @@ const handleSupabaseError = (error: any) => {
 
 export const api = {
   // Customer endpoints
-  getCustomers: async (): Promise<Customer[]> => {
+  getCustomers: async (creatorId?: string, clerkToken?: string): Promise<Customer[]> => {
     try {
-      const { data: customersData, error: customersError } = await supabase
+      const client = getClient(clerkToken);
+      let query = client
         .from('customers')
         .select(`
           *,
           sales_person:sales_persons(id, name),
           follow_ups(*)
-        `)
+        `);
+
+      if (creatorId) {
+        query = query.eq('created_by', creatorId);
+      }
+
+      const { data: customersData, error: customersError } = await query
         .order('created_at', { ascending: false });
 
       handleSupabaseError(customersError);
@@ -54,11 +63,12 @@ export const api = {
       throw error;
     }
   },
-  
-  createCustomer: async (customerData: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> => {
+
+  createCustomer: async (customerData: Omit<Customer, 'id' | 'createdAt'>, userId?: string, clerkToken?: string): Promise<Customer> => {
     try {
+      const client = getClient(clerkToken);
       // First, create the customer
-      const { data: customer, error: customerError } = await supabase
+      const { data: customer, error: customerError } = await client
         .from('customers')
         .insert({
           name: customerData.name,
@@ -67,7 +77,8 @@ export const api = {
           referral_source: customerData.referralSource,
           sales_person_id: customerData.salesPerson.id,
           remarks: customerData.remarks,
-          last_contacted_date: customerData.lastContactedDate || null
+          last_contacted_date: customerData.lastContactedDate || null,
+          created_by: userId
         })
         .select()
         .single();
@@ -82,10 +93,11 @@ export const api = {
           status: fu.status,
           remarks: fu.remarks,
           sales_amount: fu.salesAmount || 0,
-          amount_received: fu.amountReceived || false
+          amount_received: fu.amountReceived || false,
+          created_by: userId
         }));
 
-        const { error: followUpsError } = await supabase
+        const { error: followUpsError } = await client
           .from('follow_ups')
           .insert(followUpsToInsert);
 
@@ -93,7 +105,7 @@ export const api = {
       }
 
       // Return the created customer with follow-ups
-      const customers = await api.getCustomers();
+      const customers = await api.getCustomers(undefined, clerkToken);
       return customers.find(c => c.id === customer.id)!;
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -101,10 +113,11 @@ export const api = {
     }
   },
 
-  updateCustomer: async (id: string, customerData: Customer): Promise<Customer> => {
+  updateCustomer: async (id: string, customerData: Customer, clerkToken?: string): Promise<Customer> => {
     try {
+      const client = getClient(clerkToken);
       // Update customer
-      const { error: customerError } = await supabase
+      const { error: customerError } = await client
         .from('customers')
         .update({
           name: customerData.name,
@@ -120,7 +133,7 @@ export const api = {
       handleSupabaseError(customerError);
 
       // Delete existing follow-ups and recreate them
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await client
         .from('follow_ups')
         .delete()
         .eq('customer_id', id);
@@ -138,7 +151,7 @@ export const api = {
           amount_received: fu.amountReceived || false
         }));
 
-        const { error: followUpsError } = await supabase
+        const { error: followUpsError } = await client
           .from('follow_ups')
           .insert(followUpsToInsert);
 
@@ -146,7 +159,7 @@ export const api = {
       }
 
       // Return the updated customer
-      const customers = await api.getCustomers();
+      const customers = await api.getCustomers(undefined, clerkToken);
       return customers.find(c => c.id === id)!;
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -154,9 +167,10 @@ export const api = {
     }
   },
 
-  deleteCustomer: async (id: string): Promise<void> => {
+  deleteCustomer: async (id: string, clerkToken?: string): Promise<void> => {
     try {
-      const { error } = await supabase
+      const client = getClient(clerkToken);
+      const { error } = await client
         .from('customers')
         .delete()
         .eq('id', id);
@@ -169,8 +183,9 @@ export const api = {
   },
 
   // Follow-up endpoints
-  updateFollowUpStatus: async (customerId: string, followUpId: string, status: FollowUpStatus, salesAmount?: number): Promise<FollowUp> => {
+  updateFollowUpStatus: async (customerId: string, followUpId: string, status: FollowUpStatus, salesAmount?: number, clerkToken?: string): Promise<FollowUp> => {
     try {
+      const client = getClient(clerkToken);
       const updateData: any = { status };
       if (status === 'Sales completed' && salesAmount !== undefined) {
         updateData.sales_amount = salesAmount;
@@ -178,7 +193,7 @@ export const api = {
         updateData.sales_amount = 0;
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('follow_ups')
         .update(updateData)
         .eq('id', followUpId)
@@ -202,9 +217,10 @@ export const api = {
     }
   },
 
-  addFollowUp: async (customerId: string, followUp: Omit<FollowUp, 'id'>): Promise<FollowUp> => {
+  addFollowUp: async (customerId: string, followUp: Omit<FollowUp, 'id'>, userId?: string, clerkToken?: string): Promise<FollowUp> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      const { data, error } = await client
         .from('follow_ups')
         .insert({
           customer_id: customerId,
@@ -212,7 +228,8 @@ export const api = {
           status: followUp.status,
           remarks: followUp.remarks,
           sales_amount: followUp.salesAmount || 0,
-          amount_received: followUp.amountReceived || false
+          amount_received: followUp.amountReceived || false,
+          created_by: userId
         })
         .select()
         .single();
@@ -234,11 +251,18 @@ export const api = {
   },
 
   // Sales person endpoints
-  getSalesPersons: async (): Promise<SalesPerson[]> => {
+  getSalesPersons: async (creatorId?: string, clerkToken?: string): Promise<SalesPerson[]> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      let query = client
         .from('sales_persons')
-        .select('*')
+        .select('*');
+
+      if (creatorId) {
+        query = query.eq('created_by', creatorId);
+      }
+
+      const { data, error } = await query
         .order('name');
 
       handleSupabaseError(error);
@@ -252,14 +276,18 @@ export const api = {
       throw error;
     }
   },
-  
-  createSalesPerson: async (name: string): Promise<SalesPerson> => {
+
+  createSalesPerson: async (name: string, userId?: string, clerkToken?: string): Promise<SalesPerson> => {
     try {
+      const client = getClient(clerkToken);
       console.log('Creating sales person with name:', name);
-      
-      const { data, error } = await supabase
+
+      const { data, error } = await client
         .from('sales_persons')
-        .insert({ name: name.trim() })
+        .insert({
+          name: name.trim(),
+          created_by: userId
+        })
         .select()
         .single();
 
@@ -280,11 +308,12 @@ export const api = {
     }
   },
 
-  updateSalesPerson: async (id: string, name: string): Promise<SalesPerson> => {
+  updateSalesPerson: async (id: string, name: string, clerkToken?: string): Promise<SalesPerson> => {
     try {
+      const client = getClient(clerkToken);
       console.log('Updating sales person:', id, 'with name:', name);
-      
-      const { data, error } = await supabase
+
+      const { data, error } = await client
         .from('sales_persons')
         .update({ name: name.trim() })
         .eq('id', id)
@@ -308,11 +337,12 @@ export const api = {
     }
   },
 
-  deleteSalesPerson: async (id: string): Promise<void> => {
+  deleteSalesPerson: async (id: string, clerkToken?: string): Promise<void> => {
     try {
+      const client = getClient(clerkToken);
       console.log('Deleting sales person:', id);
-      
-      const { error } = await supabase
+
+      const { error } = await client
         .from('sales_persons')
         .delete()
         .eq('id', id);

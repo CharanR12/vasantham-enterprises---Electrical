@@ -1,6 +1,8 @@
 import React from 'react';
-import { Search, Package } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Brand } from '../../types/inventory';
+import { Input } from '@/components/ui/input';
+import { Combobox } from '@/components/ui/combobox';
 
 type InventorySearchFilterProps = {
   searchTerm: string;
@@ -21,45 +23,50 @@ const InventorySearchFilter: React.FC<InventorySearchFilterProps> = ({
   setStockFilter,
   brands,
 }) => {
+  const brandOptions = [
+    { value: 'all', label: 'All Brands' },
+    ...brands.map((brand) => ({ value: brand.id, label: brand.name }))
+  ];
+
+  const stockOptions = [
+    { value: 'all', label: 'All Stock Status' },
+    { value: 'in-stock', label: 'In Stock (>5)' },
+    { value: 'low-stock', label: 'Low Stock (≤5)' },
+    { value: 'out-of-stock', label: 'Out of Stock' },
+  ];
+
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-2">
+    <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-3 border border-slate-200/50 shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="relative sm:col-span-2 lg:col-span-1">
-          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
-            <Search className="h-4 w-4 text-gray-400" />
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
+            <Search className="h-4 w-4 text-slate-400" />
           </div>
-          <input
-            type="text"
-            placeholder="Search products..."
+          <Input
+            placeholder="Search products, models, or brands..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8 w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+            className="pl-10 h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500"
           />
         </div>
 
-        <select
-          value={selectedBrand}
-          onChange={(e) => setSelectedBrand(e.target.value)}
-          className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 truncate"
-        >
-          <option value="">All Brands</option>
-          {brands.map((brand) => (
-            <option key={brand.id} value={brand.id} className="truncate">
-              {brand.name}
-            </option>
-          ))}
-        </select>
+        <Combobox
+          options={brandOptions}
+          value={selectedBrand || 'all'}
+          onChange={(val) => setSelectedBrand(val === 'all' ? '' : val)}
+          placeholder="All Brands"
+          searchPlaceholder="Search brand..."
+          className="w-full"
+        />
 
-        <select
+        <Combobox
+          options={stockOptions}
           value={stockFilter}
-          onChange={(e) => setStockFilter(e.target.value as 'all' | 'in-stock' | 'low-stock' | 'out-of-stock')}
-          className="p-2 text-sm border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="all">All Stock Levels</option>
-          <option value="in-stock">In Stock</option>
-          <option value="low-stock">Low Stock (≤5)</option>
-          <option value="out-of-stock">Out of Stock</option>
-        </select>
+          onChange={(val) => setStockFilter(val as 'all' | 'in-stock' | 'low-stock' | 'out-of-stock')}
+          placeholder="All Stock Status"
+          searchPlaceholder="Search status..."
+          className="w-full"
+        />
       </div>
     </div>
   );

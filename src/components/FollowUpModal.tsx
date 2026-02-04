@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
-import { Customer, FollowUp, FollowUpStatus } from '../types';
-import { X, Calendar, FileText, DollarSign } from 'lucide-react';
+import { Customer, FollowUpStatus } from '../types';
+import { Calendar as CalendarIcon, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useCustomers } from '../context/CustomerContext';
-import LoadingSpinner from './LoadingSpinner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type FollowUpModalProps = {
   customer: Customer;
@@ -11,40 +26,29 @@ type FollowUpModalProps = {
 };
 
 const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
-  const { updateFollowUpStatus, loading } = useCustomers();
+  const { updateFollowUpStatus } = useCustomers();
   const [salesAmounts, setSalesAmounts] = useState<Record<string, number>>({});
 
   const formatDate = (dateString: string): string => {
-    return format(parseISO(dateString), 'dd/MM/yyyy');
+    try {
+      return format(parseISO(dateString), 'dd MMM yyyy');
+    } catch (e) {
+      return dateString;
+    }
   };
 
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0
     }).format(amount);
-  };
-
-  const getStatusColor = (status: FollowUpStatus) => {
-    switch (status) {
-      case 'Sales completed':
-        return 'bg-green-100 text-green-800';
-      case 'Sales rejected':
-        return 'bg-red-100 text-red-800';
-      case 'Scheduled next follow-up':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
-    }
   };
 
   const handleStatusChange = async (followUpId: string, status: FollowUpStatus) => {
     if (status === 'Sales completed') {
       const amount = salesAmounts[followUpId];
       if (!amount || amount <= 0) {
-        alert('Please enter a valid sales amount for completed sales.');
         return;
       }
       await updateFollowUpStatus(customer.id, followUpId, status, amount);
@@ -63,102 +67,125 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold">Follow-ups for {customer.name}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-5 w-5" />
-          </button>
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden rounded-2xl">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center">
+                <CalendarIcon className="h-4 w-4 text-brand-600" />
+              </div>
+              <DialogTitle className="text-xl font-bold text-slate-800">Follow-ups</DialogTitle>
+            </div>
+            <p className="text-slate-400 text-sm font-medium mt-1">Customer: <span className="text-slate-600 font-semibold">{customer.name}</span></p>
+          </DialogHeader>
         </div>
 
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-8rem)]">
-          <div className="space-y-4">
-            {sortedFollowUps.map((followUp) => (
-              <div key={followUp.id} className="border rounded-lg p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-medium">{formatDate(followUp.date)}</span>
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {sortedFollowUps.length === 0 ? (
+            <div className="text-center py-16">
+              <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100">
+                <Clock className="h-7 w-7 text-slate-300" />
+              </div>
+              <p className="text-slate-400 font-medium">No follow-ups found</p>
+            </div>
+          ) : (
+            sortedFollowUps.map((followUp) => (
+              <div key={followUp.id} className="bg-slate-50/50 border border-slate-200/50 rounded-2xl p-5 space-y-4 transition-all duration-300 hover:border-slate-300 hover:bg-white shadow-sm hover:shadow-md">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="px-3 py-1 bg-white rounded-lg border border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {formatDate(followUp.date)}
+                    </div>
                   </div>
-                  <select
+
+                  <Select
                     value={followUp.status}
-                    onChange={(e) => handleStatusChange(followUp.id, e.target.value as FollowUpStatus)}
-                    className={`text-xs font-semibold rounded-full px-2 py-1 border-0 ${getStatusColor(followUp.status)}`}
-                    disabled={loading}
+                    onValueChange={(value) => handleStatusChange(followUp.id, value as FollowUpStatus)}
                   >
-                    <option value="Not yet contacted">Not yet contacted</option>
-                    <option value="Scheduled next follow-up">Scheduled next follow-up</option>
-                    <option value="Sales completed">Sales completed</option>
-                    <option value="Sales rejected">Sales rejected</option>
-                  </select>
+                    <SelectTrigger className="w-auto h-9 bg-white border-slate-200 rounded-xl pl-3 pr-8 text-xs font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="Not yet contacted" className="text-xs py-2">Not yet contacted</SelectItem>
+                      <SelectItem value="Scheduled next follow-up" className="text-xs py-2">Scheduled next follow-up</SelectItem>
+                      <SelectItem value="Sales completed" className="text-xs py-2">Sales completed</SelectItem>
+                      <SelectItem value="Sales rejected" className="text-xs py-2">Sales rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                {followUp.status === 'Sales completed' && (
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-green-600" />
-                    {followUp.salesAmount ? (
-                      <span className="text-sm font-medium text-green-600">
-                        Sales Amount: {formatCurrency(followUp.salesAmount)}
+                <div className="space-y-4">
+                  <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-slate-100 min-h-[70px]">
+                    <div className="mt-1">
+                      <AlertCircle className="h-4 w-4 text-slate-300" />
+                    </div>
+                    <div>
+                      <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Remarks</Label>
+                      <p className="text-sm text-slate-600 font-medium leading-relaxed mt-1">
+                        {followUp.remarks || "No remarks recorded."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {followUp.status === 'Sales completed' && (
+                    <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-xl p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white border border-emerald-100 flex items-center justify-center text-emerald-600">
+                            <DollarSign className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Sales Amount</Label>
+                            {followUp.salesAmount ? (
+                              <p className="text-sm font-bold text-emerald-700">{formatCurrency(followUp.salesAmount)}</p>
+                            ) : (
+                              <div className="flex items-center gap-2 mt-1">
+                                <Input
+                                  type="number"
+                                  value={salesAmounts[followUp.id] || ''}
+                                  onChange={(e) => handleSalesAmountChange(followUp.id, e.target.value)}
+                                  placeholder="0"
+                                  className="h-8 w-24 bg-white border-emerald-200 rounded-lg text-xs font-semibold text-emerald-800 px-2"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleStatusChange(followUp.id, 'Sales completed')}
+                                  className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-3 text-xs font-semibold"
+                                >
+                                  Save
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {followUp.amountReceived && (
-                          <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                            ✓ Received
-                          </span>
+                          <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-[10px] font-bold uppercase flex items-center gap-1.5">
+                            <CheckCircle className="h-3 w-3" />
+                            <span>Received</span>
+                          </div>
                         )}
-                        {followUp.amountReceived === false && (
-                          <span className="ml-2 text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
-                            ⏳ Pending
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">Sales Amount:</span>
-                        <input
-                          type="number"
-                          value={salesAmounts[followUp.id] || ''}
-                          onChange={(e) => handleSalesAmountChange(followUp.id, e.target.value)}
-                          placeholder="Enter amount"
-                          className="w-32 px-2 py-1 text-sm border border-gray-300 rounded"
-                          min="0"
-                          step="0.01"
-                        />
-                        <span className="text-sm text-gray-600">₹</span>
-                        <label className="flex items-center space-x-2 ml-4">
-                          <input
-                            type="checkbox"
-                            checked={followUp.amountReceived || false}
-                            onChange={(e) => {
-                              // This would need to be handled by updating the follow-up
-                              // For now, it's just visual - you'd need to add an update function
-                            }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">Amount Received</span>
-                        </label>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {followUp.remarks && (
-                  <div className="flex items-start text-gray-600">
-                    <FileText className="h-4 w-4 mr-2 mt-1" />
-                    <span className="text-sm">{followUp.remarks}</span>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
-          </div>
-
-          {loading && (
-            <div className="flex justify-center py-4">
-              <LoadingSpinner size="md" />
-            </div>
+            ))
           )}
         </div>
-      </div>
-    </div>
+
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-center">
+          <Button
+            onClick={onClose}
+            className="h-10 px-8 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold"
+          >
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

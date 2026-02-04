@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
-import { Product, Brand } from '../../types/inventory';
+import { Product } from '../../types/inventory';
 import { useInventory } from '../../context/InventoryContext';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import LoadingSpinner from '../LoadingSpinner';
 import ErrorMessage from '../ErrorMessage';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 type ProductFormProps = {
   product?: Product;
@@ -12,7 +28,7 @@ type ProductFormProps = {
 };
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
-  const { brands, addProduct, updateProduct, deleteProduct, addBrand, loading, error } = useInventory();
+  const { brands, addProduct, updateProduct, deleteProduct, addBrand, error } = useInventory();
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -40,25 +56,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.brandId) newErrors.brandId = 'Brand is required';
     if (!formData.productName.trim()) newErrors.productName = 'Product name is required';
     if (!formData.modelNumber.trim()) newErrors.modelNumber = 'Model number is required';
     if (formData.quantityAvailable < 0) newErrors.quantityAvailable = 'Quantity cannot be negative';
     if (!formData.arrivalDate) newErrors.arrivalDate = 'Arrival date is required';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setFormLoading(true);
     setFormError(null);
-    
+
     try {
       let success = false;
       if (product) {
@@ -69,7 +85,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
       } else {
         success = await addProduct(formData);
       }
-      
+
       if (success) {
         onClose();
       } else {
@@ -84,10 +100,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
 
   const handleDelete = async () => {
     if (!product) return;
-    
+
     setDeleteLoading(true);
     setFormError(null);
-    
+
     try {
       const success = await deleteProduct(product.id);
       if (success) {
@@ -105,7 +121,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
 
   const handleAddBrand = async () => {
     if (!newBrandName.trim()) return;
-    
+
     setFormLoading(true);
     try {
       const success = await addBrand(newBrandName.trim());
@@ -120,221 +136,216 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name === 'quantityAvailable' ? parseInt(value) || 0 : value 
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'quantityAvailable' ? parseInt(value) || 0 : value
     }));
   };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg p-8">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-center text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[92vh] flex flex-col">
-          <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
-            <h2 className="text-lg font-semibold">{product ? 'Edit' : 'Add'} Product</h2>
+      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-w-md max-h-[92vh] p-0 overflow-hidden rounded-2xl">
+          <div className="flex justify-between items-center p-4 border-b">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-semibold">
+                {product ? 'Edit' : 'Add'} Product
+              </DialogTitle>
+            </DialogHeader>
             <div className="flex items-center space-x-2">
               {product && (
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => setShowDeleteConfirm(true)}
-                  className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-full transition-colors"
-                  title="Delete product"
+                  className="h-9 w-9 p-0 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full"
                   disabled={formLoading || deleteLoading}
                 >
-                  <Trash2 className="h-5 w-5" />
-                </button>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               )}
-              <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-                <X className="h-5 w-5" />
-              </button>
             </div>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto p-4">
             {(error || formError) && (
-              <ErrorMessage 
-                message={formError || error || ''} 
+              <ErrorMessage
+                message={formError || error || ''}
                 onDismiss={() => setFormError(null)}
                 className="mb-4"
               />
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
-                <div className="flex gap-2">
-                  <select
-                    name="brandId"
-                    value={formData.brandId}
-                    onChange={handleChange}
-                    className={`flex-1 p-2 border rounded-md ${errors.brandId ? 'border-red-500' : 'border-gray-300'}`}
-                    disabled={formLoading || deleteLoading}
-                  >
-                    <option value="">Select Brand</option>
-                    {brands.map((brand) => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setShowNewBrandInput(!showNewBrandInput)}
-                    className="px-3 py-2 bg-gray-100 text-gray-600 rounded-md hover:bg-gray-200 transition-colors"
-                    disabled={formLoading || deleteLoading}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-                {errors.brandId && <p className="text-red-500 text-xs mt-1">{errors.brandId}</p>}
-                
-                {showNewBrandInput && (
-                  <div className="mt-2 flex gap-2">
-                    <input
-                      type="text"
-                      value={newBrandName}
-                      onChange={(e) => setNewBrandName(e.target.value)}
-                      placeholder="New brand name"
-                      className="flex-1 p-2 border border-gray-300 rounded-md text-sm"
-                      disabled={formLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddBrand}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                      disabled={formLoading || !newBrandName.trim()}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-slate-700">Brand</Label>
+                  <div className="flex gap-2">
+                    <Select
+                      value={formData.brandId}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, brandId: value }))}
+                      disabled={formLoading || deleteLoading}
                     >
-                      Add
-                    </button>
+                      <SelectTrigger className={`flex-1 h-11 bg-white border-slate-200 rounded-xl focus:ring-brand-500/20 focus:border-brand-500 ${errors.brandId ? 'border-red-500' : ''}`}>
+                        <SelectValue placeholder="Select Brand" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {brands.map((brand) => (
+                          <SelectItem key={brand.id} value={brand.id}>
+                            {brand.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowNewBrandInput(!showNewBrandInput)}
+                      className="h-11 w-11 p-0 rounded-xl hover:bg-slate-50 shrink-0"
+                      disabled={formLoading || deleteLoading}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
+                  {errors.brandId && <p className="text-red-500 text-xs font-medium ml-1">{errors.brandId}</p>}
+
+                  {showNewBrandInput && (
+                    <div className="mt-2 flex gap-2 animate-in slide-in-from-top-2 duration-200">
+                      <Input
+                        type="text"
+                        value={newBrandName}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewBrandName(e.target.value)}
+                        placeholder="New brand name"
+                        className="flex-1 h-10 bg-slate-50 border-slate-200 rounded-xl"
+                        disabled={formLoading}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleAddBrand}
+                        className="h-10 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-sm"
+                        disabled={formLoading || !newBrandName.trim()}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="productName" className="text-sm font-medium text-slate-700">Product Name</Label>
+                <Input
+                  id="productName"
                   type="text"
                   name="productName"
                   value={formData.productName}
                   onChange={handleChange}
-                  className={`w-full p-2 border rounded-md ${errors.productName ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 ${errors.productName ? 'border-red-500' : ''}`}
                   disabled={formLoading || deleteLoading}
                 />
-                {errors.productName && <p className="text-red-500 text-xs mt-1">{errors.productName}</p>}
+                {errors.productName && <p className="text-red-500 text-xs font-medium ml-1">{errors.productName}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Model Number</label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="modelNumber" className="text-sm font-medium text-slate-700">Model Number</Label>
+                <Input
+                  id="modelNumber"
                   type="text"
                   name="modelNumber"
                   value={formData.modelNumber}
                   onChange={handleChange}
-                  className={`w-full p-2 border rounded-md ${errors.modelNumber ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 ${errors.modelNumber ? 'border-red-500' : ''}`}
                   disabled={formLoading || deleteLoading}
                 />
-                {errors.modelNumber && <p className="text-red-500 text-xs mt-1">{errors.modelNumber}</p>}
+                {errors.modelNumber && <p className="text-red-500 text-xs font-medium ml-1">{errors.modelNumber}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quantity Available</label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="quantityAvailable" className="text-sm font-medium text-slate-700">Quantity Available</Label>
+                <Input
+                  id="quantityAvailable"
                   type="number"
                   name="quantityAvailable"
                   value={formData.quantityAvailable}
                   onChange={handleChange}
                   min="0"
-                  className={`w-full p-2 border rounded-md ${errors.quantityAvailable ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 ${errors.quantityAvailable ? 'border-red-500' : ''}`}
                   disabled={formLoading || deleteLoading}
                 />
-                {errors.quantityAvailable && <p className="text-red-500 text-xs mt-1">{errors.quantityAvailable}</p>}
+                {errors.quantityAvailable && <p className="text-red-500 text-xs font-medium ml-1">{errors.quantityAvailable}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Arrival Date</label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="arrivalDate" className="text-sm font-medium text-slate-700">Arrival Date</Label>
+                <Input
+                  id="arrivalDate"
                   type="date"
                   name="arrivalDate"
                   value={formData.arrivalDate}
                   onChange={handleChange}
-                  className={`w-full p-2 border rounded-md ${errors.arrivalDate ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 ${errors.arrivalDate ? 'border-red-500' : ''}`}
                   disabled={formLoading || deleteLoading}
                 />
-                {errors.arrivalDate && <p className="text-red-500 text-xs mt-1">{errors.arrivalDate}</p>}
+                {errors.arrivalDate && <p className="text-red-500 text-xs font-medium ml-1">{errors.arrivalDate}</p>}
               </div>
             </form>
           </div>
 
-          <div className="flex-shrink-0 border-t bg-white p-4 rounded-b-lg">
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                disabled={formLoading || deleteLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center transition-colors"
-                disabled={formLoading || deleteLoading}
-              >
-                {formLoading && <LoadingSpinner size="sm" className="mr-2" />}
-                {product ? 'Update' : 'Add'} Product
-              </button>
-            </div>
+          <div className="flex-shrink-0 border-t bg-slate-50 p-4 rounded-b-xl flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="h-10 px-6 rounded-xl font-medium"
+              disabled={formLoading || deleteLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="h-10 px-6 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold shadow-md"
+              disabled={formLoading || deleteLoading}
+            >
+              {formLoading && <LoadingSpinner size="sm" className="mr-2" />}
+              {product ? 'Save Changes' : 'Add Product'}
+            </Button>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <div className="flex items-center mb-4">
-              <div className="flex-shrink-0 w-10 h-10 mx-auto bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
+        <Dialog open={showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(false)}>
+          <DialogContent className="max-w-sm rounded-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-red-500" />
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Delete Product</h3>
-                <p className="text-sm text-gray-500">
-                  Are you sure you want to delete "{product?.productName}"? This action cannot be undone.
-                </p>
+              <DialogTitle className="text-xl font-bold text-slate-900 mb-2">Delete Product?</DialogTitle>
+              <p className="text-slate-500 text-sm mb-6">
+                Are you sure you want to delete "{product?.productName}"? This cannot be undone.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={handleDelete}
+                  className="h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold"
+                  disabled={deleteLoading}
+                >
+                  {deleteLoading && <LoadingSpinner size="sm" className="mr-2" />}
+                  Delete
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="h-11 text-slate-500 hover:text-slate-700"
+                  disabled={deleteLoading}
+                >
+                  Cancel
+                </Button>
               </div>
             </div>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                disabled={deleteLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center transition-colors"
-                disabled={deleteLoading}
-              >
-                {deleteLoading && <LoadingSpinner size="sm" className="mr-2" />}
-                Delete Product
-              </button>
-            </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

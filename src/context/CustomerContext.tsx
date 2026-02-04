@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Customer, SalesPerson, FollowUpStatus, User } from '../types';
 import { api } from '../services/api';
 import { useApi } from '../hooks/useApi';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useOrganization, useAuth } from '@clerk/clerk-react';
 
 type CustomerContextType = {
   customers: Customer[];
@@ -29,8 +29,23 @@ const CustomerContext = createContext<CustomerContextType | undefined>(undefined
 
 export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useUser();
+  const { membership } = useOrganization();
+  const { getToken } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesPersons, setSalesPersons] = useState<SalesPerson[]>([]);
+
+  // Role is derived from organization membership
+  const currentRole: 'admin' | 'user' = membership?.role === 'org:admin' ? 'admin' : 'user';
+
+  // DEBUG: Check Clerk role
+  useEffect(() => {
+    if (membership) {
+      console.log('Clerk Membership Role:', membership.role);
+      console.log('Derived Internal Role:', currentRole);
+    } else {
+      console.log('No organization membership found for user.');
+    }
+  }, [membership, currentRole]);
 
   // Map Clerk user to our User type
   const currentUser: User | null = user ? {
@@ -38,11 +53,9 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
     name: user.fullName || '',
     mobile: user.primaryPhoneNumber?.phoneNumber || '',
     password: '', // Not needed with Clerk
-    role: 'admin', // Default to admin for now
+    role: currentRole,
     createdAt: user.createdAt?.toISOString() || ''
   } : null;
-
-  const currentRole: 'admin' | 'user' = 'admin';
 
   const { loading, error, execute } = useApi<Customer[]>();
   const { loading: salesPersonsLoading, error: salesPersonsError, execute: executeSalesPersons } = useApi<SalesPerson[]>();
@@ -51,30 +64,35 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     refreshCustomers();
     refreshSalesPersons();
-  }, []);
-
+  }, [user?.id, membership?.id]);
 
   const refreshCustomers = async () => {
-    console.log('Refreshing customers...');
-    const result = await execute(() => api.getCustomers());
+    const filterId = currentRole === 'admin' ? undefined : currentUser?.id;
+    const result = await execute(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.getCustomers(filterId, token);
+    });
     if (result) {
-      console.log('Customers loaded:', result.length);
       setCustomers(result);
     }
   };
 
   const refreshSalesPersons = async () => {
-    console.log('Refreshing sales persons...');
-    const result = await executeSalesPersons(() => api.getSalesPersons());
+    const filterId = currentRole === 'admin' ? undefined : currentUser?.id;
+    const result = await executeSalesPersons(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.getSalesPersons(filterId, token);
+    });
     if (result) {
-      console.log('Sales persons loaded:', result.length);
       setSalesPersons(result);
     }
   };
 
   const addCustomer = async (customer: Omit<Customer, 'id' | 'createdAt'>): Promise<boolean> => {
-    console.log('Adding customer:', customer.name);
-    const result = await execute(() => api.createCustomer(customer));
+    const result = await execute(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.createCustomer(customer, currentUser?.id, token) as unknown as Promise<Customer[]>;
+    });
     if (result) {
       await refreshCustomers();
       return true;
@@ -83,8 +101,10 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const updateCustomer = async (customer: Customer): Promise<boolean> => {
-    console.log('Updating customer:', customer.name);
-    const result = await execute(() => api.updateCustomer(customer.id, customer));
+    const result = await execute(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.updateCustomer(customer.id, customer, token) as unknown as Promise<Customer[]>;
+    });
     if (result) {
       await refreshCustomers();
       return true;
@@ -93,8 +113,10 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const deleteCustomer = async (id: string): Promise<boolean> => {
-    console.log('Deleting customer:', id);
-    const result = await execute(() => api.deleteCustomer(id));
+    const result = await execute(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.deleteCustomer(id, token) as unknown as Promise<Customer[]>;
+    });
     if (result !== null) {
       await refreshCustomers();
       return true;
@@ -103,8 +125,10 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const updateFollowUpStatus = async (customerId: string, followUpId: string, status: FollowUpStatus, salesAmount?: number): Promise<boolean> => {
-    console.log('Updating follow-up status:', followUpId, status, salesAmount);
-    const result = await execute(() => api.updateFollowUpStatus(customerId, followUpId, status, salesAmount));
+    const result = await execute(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.updateFollowUpStatus(customerId, followUpId, status, salesAmount, token) as unknown as Promise<Customer[]>;
+    });
     if (result) {
       await refreshCustomers();
       return true;
@@ -113,8 +137,10 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const addFollowUp = async (customerId: string, followUp: any): Promise<boolean> => {
-    console.log('Adding follow-up for customer:', customerId);
-    const result = await execute(() => api.addFollowUp(customerId, followUp));
+    const result = await execute(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.addFollowUp(customerId, followUp, currentUser?.id, token) as unknown as Promise<Customer[]>;
+    });
     if (result) {
       await refreshCustomers();
       return true;
@@ -123,38 +149,38 @@ export const CustomerProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const addSalesPerson = async (name: string): Promise<boolean> => {
-    console.log('Adding sales person:', name);
-    const result = await executeSalesPersons(() => api.createSalesPerson(name));
+    const result = await executeSalesPersons(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.createSalesPerson(name, currentUser?.id, token) as unknown as Promise<SalesPerson[]>;
+    });
     if (result) {
-      console.log('Sales person added successfully');
       await refreshSalesPersons();
       return true;
     }
-    console.log('Failed to add sales person');
     return false;
   };
 
   const updateSalesPerson = async (id: string, name: string): Promise<boolean> => {
-    console.log('Updating sales person:', id, name);
-    const result = await executeSalesPersons(() => api.updateSalesPerson(id, name));
+    const result = await executeSalesPersons(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.updateSalesPerson(id, name, token) as unknown as Promise<SalesPerson[]>;
+    });
     if (result) {
-      console.log('Sales person updated successfully');
       await refreshSalesPersons();
       return true;
     }
-    console.log('Failed to update sales person');
     return false;
   };
 
   const removeSalesPerson = async (id: string): Promise<boolean> => {
-    console.log('Removing sales person:', id);
-    const result = await executeSalesPersons(() => api.deleteSalesPerson(id));
+    const result = await executeSalesPersons(async () => {
+      const token = await getToken({ template: 'supabase' }) || undefined;
+      return api.deleteSalesPerson(id, token) as unknown as Promise<SalesPerson[]>;
+    });
     if (result !== null) {
-      console.log('Sales person removed successfully');
       await refreshSalesPersons();
       return true;
     }
-    console.log('Failed to remove sales person');
     return false;
   };
 

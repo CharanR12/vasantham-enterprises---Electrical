@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, createClerkSupabaseClient } from '../lib/supabase';
 import { Product, Brand, SaleEntry } from '../types/inventory';
 import { ApiError } from './api';
 
@@ -9,13 +9,22 @@ const handleSupabaseError = (error: any) => {
   }
 };
 
+const getClient = (token?: string) => token ? createClerkSupabaseClient(token) : supabase;
+
 export const inventoryApi = {
   // Brand endpoints
-  getBrands: async (): Promise<Brand[]> => {
+  getBrands: async (creatorId?: string, clerkToken?: string): Promise<Brand[]> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      let query = client
         .from('brands')
-        .select('*')
+        .select('*');
+
+      if (creatorId) {
+        query = query.eq('created_by', creatorId);
+      }
+
+      const { data, error } = await query
         .order('name');
 
       handleSupabaseError(error);
@@ -31,11 +40,15 @@ export const inventoryApi = {
     }
   },
 
-  createBrand: async (name: string): Promise<Brand> => {
+  createBrand: async (name: string, userId?: string, clerkToken?: string): Promise<Brand> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      const { data, error } = await client
         .from('brands')
-        .insert({ name: name.trim() })
+        .insert({
+          name: name.trim(),
+          created_by: userId
+        })
         .select()
         .single();
 
@@ -52,9 +65,10 @@ export const inventoryApi = {
     }
   },
 
-  updateBrand: async (id: string, name: string): Promise<Brand> => {
+  updateBrand: async (id: string, name: string, clerkToken?: string): Promise<Brand> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      const { data, error } = await client
         .from('brands')
         .update({ name: name.trim() })
         .eq('id', id)
@@ -74,9 +88,10 @@ export const inventoryApi = {
     }
   },
 
-  deleteBrand: async (id: string): Promise<void> => {
+  deleteBrand: async (id: string, clerkToken?: string): Promise<void> => {
     try {
-      const { error } = await supabase
+      const client = getClient(clerkToken);
+      const { error } = await client
         .from('brands')
         .delete()
         .eq('id', id);
@@ -89,14 +104,21 @@ export const inventoryApi = {
   },
 
   // Product endpoints
-  getProducts: async (): Promise<Product[]> => {
+  getProducts: async (creatorId?: string, clerkToken?: string): Promise<Product[]> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      let query = client
         .from('products')
         .select(`
           *,
           brand:brands(id, name)
-        `)
+        `);
+
+      if (creatorId) {
+        query = query.eq('created_by', creatorId);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false });
 
       handleSupabaseError(error);
@@ -117,23 +139,25 @@ export const inventoryApi = {
     }
   },
 
-  createProduct: async (productData: Omit<Product, 'id' | 'createdAt' | 'brand'>): Promise<Product> => {
+  createProduct: async (productData: Omit<Product, 'id' | 'createdAt' | 'brand'>, userId?: string, clerkToken?: string): Promise<Product> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      const { data, error } = await client
         .from('products')
         .insert({
           brand_id: productData.brandId,
           product_name: productData.productName,
           model_number: productData.modelNumber,
           quantity_available: productData.quantityAvailable,
-          arrival_date: productData.arrivalDate
+          arrival_date: productData.arrivalDate,
+          created_by: userId
         })
         .select()
         .single();
 
       handleSupabaseError(error);
 
-      const products = await inventoryApi.getProducts();
+      const products = await inventoryApi.getProducts(undefined, clerkToken);
       return products.find(p => p.id === data.id)!;
     } catch (error) {
       console.error('Error creating product:', error);
@@ -141,9 +165,10 @@ export const inventoryApi = {
     }
   },
 
-  updateProduct: async (id: string, productData: Product): Promise<Product> => {
+  updateProduct: async (id: string, productData: Product, clerkToken?: string): Promise<Product> => {
     try {
-      const { error } = await supabase
+      const client = getClient(clerkToken);
+      const { error } = await client
         .from('products')
         .update({
           brand_id: productData.brandId,
@@ -156,7 +181,7 @@ export const inventoryApi = {
 
       handleSupabaseError(error);
 
-      const products = await inventoryApi.getProducts();
+      const products = await inventoryApi.getProducts(undefined, clerkToken);
       return products.find(p => p.id === id)!;
     } catch (error) {
       console.error('Error updating product:', error);
@@ -164,9 +189,10 @@ export const inventoryApi = {
     }
   },
 
-  deleteProduct: async (id: string): Promise<void> => {
+  deleteProduct: async (id: string, clerkToken?: string): Promise<void> => {
     try {
-      const { error } = await supabase
+      const client = getClient(clerkToken);
+      const { error } = await client
         .from('products')
         .delete()
         .eq('id', id);
@@ -179,11 +205,18 @@ export const inventoryApi = {
   },
 
   // Sale entry endpoints
-  getSaleEntries: async (): Promise<SaleEntry[]> => {
+  getSaleEntries: async (creatorId?: string, clerkToken?: string): Promise<SaleEntry[]> => {
     try {
-      const { data, error } = await supabase
+      const client = getClient(clerkToken);
+      let query = client
         .from('sale_entries')
-        .select('*')
+        .select('*');
+
+      if (creatorId) {
+        query = query.eq('created_by', creatorId);
+      }
+
+      const { data, error } = await query
         .order('sale_date', { ascending: false });
 
       handleSupabaseError(error);
@@ -203,10 +236,11 @@ export const inventoryApi = {
     }
   },
 
-  createSaleEntry: async (saleData: Omit<SaleEntry, 'id' | 'createdAt'>): Promise<SaleEntry> => {
+  createSaleEntry: async (saleData: Omit<SaleEntry, 'id' | 'createdAt'>, userId?: string, clerkToken?: string): Promise<SaleEntry> => {
     try {
+      const client = getClient(clerkToken);
       // First, get the current product to check available quantity
-      const { data: product, error: productError } = await supabase
+      const { data: product, error: productError } = await client
         .from('products')
         .select('quantity_available')
         .eq('id', saleData.productId)
@@ -214,19 +248,20 @@ export const inventoryApi = {
 
       handleSupabaseError(productError);
 
-      if (product.quantity_available < saleData.quantitySold) {
-        throw new ApiError(400, 'Insufficient quantity available');
+      if (!product || product.quantity_available < saleData.quantitySold) {
+        throw new ApiError(400, 'Insufficient quantity available or product not found');
       }
 
       // Create the sale entry
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('sale_entries')
         .insert({
           product_id: saleData.productId,
           sale_date: saleData.saleDate,
           customer_name: saleData.customerName,
           bill_number: saleData.billNumber || null,
-          quantity_sold: saleData.quantitySold
+          quantity_sold: saleData.quantitySold,
+          created_by: userId
         })
         .select()
         .single();
@@ -234,7 +269,7 @@ export const inventoryApi = {
       handleSupabaseError(error);
 
       // Update the product quantity
-      const { error: updateError } = await supabase
+      const { error: updateError } = await client
         .from('products')
         .update({
           quantity_available: product.quantity_available - saleData.quantitySold

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Layout from '../components/Layout';
 import SearchFilter from '../components/SearchFilter';
 import KPICards from '../components/KPICards';
 import CustomerCard from '../components/CustomerCard';
@@ -12,30 +11,35 @@ import { Plus } from 'lucide-react';
 import { parseISO, isWithinInterval, isToday } from 'date-fns';
 
 const TodayFollowUpsPage: React.FC = () => {
-  const { 
-    customers, 
-    loading, 
-    error, 
-    salesPersons, 
-    currentRole, 
-    currentUser 
+  const {
+    customers,
+    loading,
+    error,
+    salesPersons,
+    currentRole,
+    currentUser
   } = useCustomers();
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<FollowUpStatus | ''>('');
   const [selectedReferralSource, setSelectedReferralSource] = useState<ReferralSource | ''>('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [viewMode, setViewMode] = useState<'today' | 'all' | 'period'>('all');
-  const [dateRange, setDateRange] = useState({ 
-    start: new Date().toISOString().split('T')[0], 
-    end: new Date().toISOString().split('T')[0] 
+
+  // Follow-up Date Filter
+  const [followUpFilter, setFollowUpFilter] = useState<'all' | 'today' | 'custom'>('all');
+  const [followUpDateRange, setFollowUpDateRange] = useState({
+    start: new Date().toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
   });
-  const [creationDateRange, setCreationDateRange] = useState({ 
-    start: new Date().toISOString().split('T')[0], 
-    end: new Date().toISOString().split('T')[0] 
+
+  // Creation Date Filter
+  const [creationFilter, setCreationFilter] = useState<'all' | 'today' | 'custom'>('all');
+  const [creationDateRange, setCreationDateRange] = useState({
+    start: new Date().toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
   });
-  const [filterByCreationDate, setFilterByCreationDate] = useState(false);
+
   const [amountReceivedFilter, setAmountReceivedFilter] = useState<'all' | 'received' | 'not-received'>('all');
 
   const filterCustomers = (): Customer[] => {
@@ -50,11 +54,11 @@ const TodayFollowUpsPage: React.FC = () => {
         customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customer.mobile.includes(searchTerm) ||
         customer.location.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       // Sales person filter
       const matchesSalesPerson =
         selectedSalesPerson === '' || customer.salesPerson.id === selectedSalesPerson;
-      
+
       // Status filter
       const matchesStatus =
         selectedStatus === '' || customer.followUps.some(f => f.status === selectedStatus);
@@ -62,7 +66,7 @@ const TodayFollowUpsPage: React.FC = () => {
       // Referral source filter
       const matchesReferralSource =
         selectedReferralSource === '' || customer.referralSource === selectedReferralSource;
-      
+
       // Amount received filter
       let matchesAmountReceived = true;
       if (amountReceivedFilter !== 'all') {
@@ -77,40 +81,39 @@ const TodayFollowUpsPage: React.FC = () => {
           matchesAmountReceived = false;
         }
       }
-      
-      // Date filter - either by follow-up date or creation date
-      let matchesDate = true;
-      
-      if (filterByCreationDate) {
-        // Filter by when follow-ups were created (added to system)
-        if (viewMode === 'today') {
-          matchesDate = customer.followUps.some(f => {
-            // Since we don't have creation timestamps for follow-ups, we'll use customer creation date
-            // In a real system, you'd want to add created_at timestamps to follow-ups
-            return isToday(parseISO(customer.createdAt));
-          });
-        } else if (viewMode === 'period' && creationDateRange.start && creationDateRange.end) {
-          const start = parseISO(creationDateRange.start);
-          const end = parseISO(creationDateRange.end);
-          const customerCreatedDate = parseISO(customer.createdAt);
-          matchesDate = isWithinInterval(customerCreatedDate, { start, end });
-        }
-      } else {
-        // Filter by follow-up scheduled date (original behavior)
-        if (viewMode === 'today') {
-          const today = new Date().toISOString().split('T')[0];
-          matchesDate = customer.followUps.some(f => f.date === today);
-        } else if (viewMode === 'period' && dateRange.start && dateRange.end) {
-          const start = parseISO(dateRange.start);
-          const end = parseISO(dateRange.end);
-          matchesDate = customer.followUps.some(f => {
-            const followUpDate = parseISO(f.date);
-            return isWithinInterval(followUpDate, { start, end });
-          });
-        }
+
+      // Filter by Follow-up Scheduled Date
+      let matchesFollowUpDate = true;
+      if (followUpFilter === 'today') {
+        const today = new Date().toISOString().split('T')[0];
+        matchesFollowUpDate = customer.followUps.some(f => f.date === today);
+      } else if (followUpFilter === 'custom' && followUpDateRange.start && followUpDateRange.end) {
+        const start = parseISO(followUpDateRange.start);
+        const end = parseISO(followUpDateRange.end);
+        matchesFollowUpDate = customer.followUps.some(f => {
+          const followUpDate = parseISO(f.date);
+          return isWithinInterval(followUpDate, { start, end });
+        });
       }
-      
-      return matchesSearch && matchesSalesPerson && matchesStatus && matchesReferralSource && matchesDate && matchesAmountReceived;
+
+      // Filter by Creation Date
+      let matchesCreationDate = true;
+      if (creationFilter === 'today') {
+        matchesCreationDate = isToday(parseISO(customer.createdAt));
+      } else if (creationFilter === 'custom' && creationDateRange.start && creationDateRange.end) {
+        const start = parseISO(creationDateRange.start);
+        const end = parseISO(creationDateRange.end);
+        const customerCreatedDate = parseISO(customer.createdAt);
+        matchesCreationDate = isWithinInterval(customerCreatedDate, { start, end });
+      }
+
+      return matchesSearch &&
+        matchesSalesPerson &&
+        matchesStatus &&
+        matchesReferralSource &&
+        matchesAmountReceived &&
+        matchesFollowUpDate &&
+        matchesCreationDate;
     });
   };
 
@@ -118,27 +121,23 @@ const TodayFollowUpsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-64">
-          <div className="text-center">
-            <LoadingSpinner size="lg" />
-            <p className="mt-4 text-gray-600">Loading customers...</p>
-          </div>
-        </div>
-      </Layout>
+      <div className="flex flex-col justify-center items-center min-h-[400px] animate-fadeIn">
+        <LoadingSpinner size="lg" />
+        <p className="mt-6 text-slate-500 font-semibold tracking-wide animate-pulse">Loading customers...</p>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="space-y-4">
-        {error && (
-          <ErrorMessage 
-            message={error} 
-            className="mb-4"
-          />
-        )}
+    <div className="space-y-8 pb-12">
+      {error && (
+        <ErrorMessage
+          message={error}
+          className="mb-6 rounded-2xl shadow-sm border-red-100"
+        />
+      )}
 
+      <div className="animate-fadeIn">
         <SearchFilter
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -149,47 +148,65 @@ const TodayFollowUpsPage: React.FC = () => {
           referralSource={selectedReferralSource}
           setReferralSource={setSelectedReferralSource}
           salesPersons={currentRole === 'admin' ? salesPersons : (currentUser ? [currentUser] : [])}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
+          followUpFilter={followUpFilter}
+          setFollowUpFilter={setFollowUpFilter}
+          followUpDateRange={followUpDateRange}
+          setFollowUpDateRange={setFollowUpDateRange}
+          creationFilter={creationFilter}
+          setCreationFilter={setCreationFilter}
           creationDateRange={creationDateRange}
           setCreationDateRange={setCreationDateRange}
-          filterByCreationDate={filterByCreationDate}
-          setFilterByCreationDate={setFilterByCreationDate}
           amountReceivedFilter={amountReceivedFilter}
           setAmountReceivedFilter={setAmountReceivedFilter}
         />
+      </div>
 
+      <div className="animate-fadeIn [animation-delay:100ms]">
         <KPICards customers={filtered} />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.length > 0 ? (
-            filtered.map((customer) => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-              />
-            ))
-          ) : (
-            <div className="col-span-full text-center py-8">
-              <p className="text-gray-500">No customers found matching the current filters.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn [animation-delay:200ms]">
+        {filtered.length > 0 ? (
+          filtered.map((customer) => (
+            <CustomerCard
+              key={customer.id}
+              customer={customer}
+            />
+          ))
+        ) : (
+          <div className="col-span-full premium-card py-16 text-center border-dashed">
+            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+              <Plus className="h-8 w-8 text-slate-300" />
             </div>
-          )}
-        </div>
-
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="fixed bottom-20 right-4 lg:bottom-4 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
-        >
-          <Plus className="h-6 w-6" />
-        </button>
-
-        {showAddForm && (
-          <CustomerForm onClose={() => setShowAddForm(false)} />
+            <p className="text-slate-500 font-medium">No customers match your current filters.</p>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedStatus('');
+                setFollowUpFilter('all');
+                setCreationFilter('all');
+                setSelectedSalesPerson('');
+              }}
+              className="mt-4 text-brand-600 font-bold hover:underline underline-offset-4"
+            >
+              Clear all filters
+            </button>
+          </div>
         )}
       </div>
-    </Layout>
+
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="fixed bottom-8 right-8 z-40 bg-brand-600 text-white p-4 rounded-2xl shadow-xl shadow-brand-500/20 hover:bg-brand-700 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center"
+        title="Add New Customer"
+      >
+        <Plus className="h-7 w-7" />
+      </button>
+
+      {showAddForm && (
+        <CustomerForm onClose={() => setShowAddForm(false)} salesPersons={salesPersons} />
+      )}
+    </div>
   );
 };
 
