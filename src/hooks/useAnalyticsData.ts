@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useCustomers } from '../context/CustomerContext';
-import { useInventory } from '../context/InventoryContext';
+import { useCustomersQuery, useSalesPersonsQuery } from './queries/useCustomerQueries';
+import { useProductsQuery, useSalesEntriesQuery } from './queries/useInventoryQueries';
 import {
     parseISO,
     format,
@@ -13,6 +13,8 @@ import {
     startOfDay,
     endOfDay
 } from 'date-fns';
+
+// ... interface definitions ...
 
 export interface FollowUpSale {
     type: 'follow-up';
@@ -54,11 +56,13 @@ export const useAnalyticsData = (
     selectedSalesPerson: string,
     salesTypeFilter: 'all' | 'follow-up' | 'inventory'
 ) => {
-    const { customers, salesPersons, loading: salesLoading, error: salesError } = useCustomers();
-    const { products, salesEntries, loading: inventoryLoading, error: inventoryError } = useInventory();
+    const { data: customers = [], isLoading: salesLoading, error: salesError } = useCustomersQuery();
+    const { data: salesPersons = [], isLoading: sPLoading } = useSalesPersonsQuery();
+    const { data: products = [], isLoading: inventoryLoading, error: inventoryError } = useProductsQuery();
+    const { data: salesEntries = [], isLoading: seLoading, error: seError } = useSalesEntriesQuery();
 
-    const loading = salesLoading || inventoryLoading;
-    const error = salesError || inventoryError;
+    const loading = salesLoading || sPLoading || inventoryLoading || seLoading;
+    const error = salesError || inventoryError || seError;
 
     // Enhanced Sales Analytics with Revenue
     const salesMetrics = useMemo(() => {

@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { Product } from '../types/inventory';
-import { useInventory } from '../context/InventoryContext';
+import {
+    useBrandsQuery,
+    useAddProductMutation,
+    useUpdateProductMutation,
+    useDeleteProductMutation,
+    useAddBrandMutation
+} from './queries/useInventoryQueries';
 import { format } from 'date-fns';
 
 export const useProductForm = (product: Product | undefined, onClose: () => void) => {
-    const { brands, addProduct, updateProduct, deleteProduct, addBrand, error: serverError } = useInventory();
-    const [formLoading, setFormLoading] = useState(false);
-    const [deleteLoading, setDeleteLoading] = useState(false);
+    const { data: brands = [] } = useBrandsQuery();
+    const addProductMutation = useAddProductMutation();
+    const updateProductMutation = useUpdateProductMutation();
+    const deleteProductMutation = useDeleteProductMutation();
+    const addBrandMutation = useAddBrandMutation();
+
     const [formError, setFormError] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showNewBrandInput, setShowNewBrandInput] = useState(false);
@@ -48,49 +57,34 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
 
         if (!validateForm()) return;
 
-        setFormLoading(true);
         setFormError(null);
 
         try {
-            let success = false;
             if (product) {
-                success = await updateProduct({
+                await updateProductMutation.mutateAsync({
                     ...product,
                     ...formData
                 });
             } else {
-                success = await addProduct(formData);
+                await addProductMutation.mutateAsync(formData);
             }
-
-            if (success) {
-                onClose();
-            } else {
-                setFormError('Failed to save product. Please try again.');
-            }
-        } catch (err) {
-            setFormError('An unexpected error occurred. Please try again.');
-        } finally {
-            setFormLoading(false);
+            onClose();
+        } catch (err: any) {
+            setFormError(err.message || 'An unexpected error occurred. Please try again.');
         }
     };
 
     const handleDelete = async () => {
         if (!product) return;
 
-        setDeleteLoading(true);
         setFormError(null);
 
         try {
-            const success = await deleteProduct(product.id);
-            if (success) {
-                onClose();
-            } else {
-                setFormError('Failed to delete product. Please try again.');
-            }
-        } catch (err) {
-            setFormError('An unexpected error occurred while deleting.');
+            await deleteProductMutation.mutateAsync(product.id);
+            onClose();
+        } catch (err: any) {
+            setFormError(err.message || 'An unexpected error occurred while deleting.');
         } finally {
-            setDeleteLoading(false);
             setShowDeleteConfirm(false);
         }
     };
@@ -98,17 +92,13 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
     const handleAddBrand = async () => {
         if (!newBrandName.trim()) return;
 
-        setFormLoading(true);
+        setFormError(null);
         try {
-            const success = await addBrand(newBrandName.trim());
-            if (success) {
-                setNewBrandName('');
-                setShowNewBrandInput(false);
-            }
-        } catch (err) {
-            setFormError('Failed to add brand. Please try again.');
-        } finally {
-            setFormLoading(false);
+            await addBrandMutation.mutateAsync(newBrandName.trim());
+            setNewBrandName('');
+            setShowNewBrandInput(false);
+        } catch (err: any) {
+            setFormError(err.message || 'Failed to add brand. Please try again.');
         }
     };
 
@@ -125,11 +115,11 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         formData,
         setFormData,
         errors,
-        formLoading,
-        deleteLoading,
+        formLoading: addProductMutation.isPending || updateProductMutation.isPending || addBrandMutation.isPending,
+        deleteLoading: deleteProductMutation.isPending,
         formError,
         setFormError,
-        serverError,
+        serverError: addProductMutation.error?.message || updateProductMutation.error?.message || deleteProductMutation.error?.message || addBrandMutation.error?.message || null,
         showDeleteConfirm,
         setShowDeleteConfirm,
         showNewBrandInput,

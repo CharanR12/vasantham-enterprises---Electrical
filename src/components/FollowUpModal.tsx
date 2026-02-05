@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Customer, FollowUpStatus } from '../types';
 import { Calendar as CalendarIcon, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { useCustomers } from '../context/CustomerContext';
+import { useUpdateFollowUpStatusMutation } from '../hooks/queries/useCustomerQueries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ type FollowUpModalProps = {
 };
 
 const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
-  const { updateFollowUpStatus } = useCustomers();
+  const updateFollowUpMutation = useUpdateFollowUpStatusMutation();
   const [salesAmounts, setSalesAmounts] = useState<Record<string, number>>({});
 
   const formatDate = (dateString: string): string => {
@@ -46,14 +46,18 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
   };
 
   const handleStatusChange = async (followUpId: string, status: FollowUpStatus) => {
-    if (status === 'Sales completed') {
-      const amount = salesAmounts[followUpId];
-      if (!amount || amount <= 0) {
-        return;
+    try {
+      if (status === 'Sales completed') {
+        const amount = salesAmounts[followUpId];
+        if (!amount || amount <= 0) {
+          return;
+        }
+        await updateFollowUpMutation.mutateAsync({ customerId: customer.id, followUpId, status, salesAmount: amount });
+      } else {
+        await updateFollowUpMutation.mutateAsync({ customerId: customer.id, followUpId, status });
       }
-      await updateFollowUpStatus(customer.id, followUpId, status, amount);
-    } else {
-      await updateFollowUpStatus(customer.id, followUpId, status);
+    } catch (error) {
+      console.error('Failed to update follow-up status:', error);
     }
   };
 

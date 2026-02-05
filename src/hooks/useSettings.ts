@@ -1,25 +1,28 @@
 import { useState } from 'react';
-import { useInventory } from '../context/InventoryContext';
-import { useCustomers } from '../context/CustomerContext';
+import {
+    useBrandsQuery,
+    useAddBrandMutation,
+    useUpdateBrandMutation,
+    useDeleteBrandMutation
+} from './queries/useInventoryQueries';
+import {
+    useSalesPersonsQuery,
+    useAddSalesPersonMutation,
+    useUpdateSalesPersonMutation,
+    useDeleteSalesPersonMutation
+} from './queries/useCustomerQueries';
 
 export const useSettings = () => {
-    const {
-        brands,
-        addBrand,
-        updateBrand,
-        deleteBrand,
-        loading: inventoryLoading,
-        error: inventoryError
-    } = useInventory();
+    const { data: brands = [], isLoading: brandsLoading, error: brandsError } = useBrandsQuery();
+    const { data: salesPersons = [], isLoading: sPLoading, error: sPError } = useSalesPersonsQuery();
 
-    const {
-        salesPersons,
-        addSalesPerson,
-        updateSalesPerson,
-        removeSalesPerson,
-        salesPersonsLoading,
-        salesPersonsError
-    } = useCustomers();
+    const addBrandMutation = useAddBrandMutation();
+    const updateBrandMutation = useUpdateBrandMutation();
+    const deleteBrandMutation = useDeleteBrandMutation();
+
+    const addSalesPersonMutation = useAddSalesPersonMutation();
+    const updateSalesPersonMutation = useUpdateSalesPersonMutation();
+    const deleteSalesPersonMutation = useDeleteSalesPersonMutation();
 
     const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
     const [editBrandName, setEditBrandName] = useState('');
@@ -29,7 +32,6 @@ export const useSettings = () => {
     const [editSalesPersonName, setEditSalesPersonName] = useState('');
     const [newSalesPersonName, setNewSalesPersonName] = useState('');
 
-    const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [actionError, setActionError] = useState<string | null>(null);
 
     const handleEditBrand = (id: string, name: string) => {
@@ -44,21 +46,12 @@ export const useSettings = () => {
             return;
         }
 
-        setActionLoading(id);
-        setActionError(null);
-
         try {
-            const success = await updateBrand(id, editBrandName.trim());
-            if (success) {
-                setEditingBrandId(null);
-                setEditBrandName('');
-            } else {
-                setActionError('Failed to update brand');
-            }
+            await updateBrandMutation.mutateAsync({ id, name: editBrandName.trim() });
+            setEditingBrandId(null);
+            setEditBrandName('');
         } catch (err: any) {
-            setActionError(err.message || 'An unexpected error occurred');
-        } finally {
-            setActionLoading(null);
+            setActionError(err.message || 'Failed to update brand');
         }
     };
 
@@ -68,38 +61,21 @@ export const useSettings = () => {
             return;
         }
 
-        setActionLoading('add-brand');
-        setActionError(null);
-
         try {
-            const success = await addBrand(newBrandName.trim());
-            if (success) {
-                setNewBrandName('');
-            } else {
-                setActionError('Failed to add brand');
-            }
+            await addBrandMutation.mutateAsync(newBrandName.trim());
+            setNewBrandName('');
         } catch (err: any) {
-            setActionError(err.message || 'An unexpected error occurred');
-        } finally {
-            setActionLoading(null);
+            setActionError(err.message || 'Failed to add brand');
         }
     };
 
     const handleRemoveBrand = async (id: string) => {
         if (!confirm('Are you sure you want to remove this brand? This may affect associated products.')) return;
 
-        setActionLoading(id);
-        setActionError(null);
-
         try {
-            const success = await deleteBrand(id);
-            if (!success) {
-                setActionError('Failed to remove brand. It may have associated products.');
-            }
+            await deleteBrandMutation.mutateAsync(id);
         } catch (err: any) {
-            setActionError(err.message || 'An unexpected error occurred');
-        } finally {
-            setActionLoading(null);
+            setActionError(err.message || 'Failed to remove brand');
         }
     };
 
@@ -115,21 +91,12 @@ export const useSettings = () => {
             return;
         }
 
-        setActionLoading(id);
-        setActionError(null);
-
         try {
-            const success = await updateSalesPerson(id, editSalesPersonName.trim());
-            if (success) {
-                setEditingSalesPersonId(null);
-                setEditSalesPersonName('');
-            } else {
-                setActionError('Failed to update sales person');
-            }
+            await updateSalesPersonMutation.mutateAsync({ id, name: editSalesPersonName.trim() });
+            setEditingSalesPersonId(null);
+            setEditSalesPersonName('');
         } catch (err: any) {
-            setActionError(err.message || 'An unexpected error occurred');
-        } finally {
-            setActionLoading(null);
+            setActionError(err.message || 'Failed to update sales person');
         }
     };
 
@@ -139,38 +106,21 @@ export const useSettings = () => {
             return;
         }
 
-        setActionLoading('add-sales-person');
-        setActionError(null);
-
         try {
-            const success = await addSalesPerson(newSalesPersonName.trim());
-            if (success) {
-                setNewSalesPersonName('');
-            } else {
-                setActionError('Failed to add sales person');
-            }
+            await addSalesPersonMutation.mutateAsync(newSalesPersonName.trim());
+            setNewSalesPersonName('');
         } catch (err: any) {
-            setActionError(err.message || 'An unexpected error occurred');
-        } finally {
-            setActionLoading(null);
+            setActionError(err.message || 'Failed to add sales person');
         }
     };
 
     const handleRemoveSalesPerson = async (id: string) => {
         if (!confirm('Are you sure you want to remove this sales person? This may affect associated customers.')) return;
 
-        setActionLoading(id);
-        setActionError(null);
-
         try {
-            const success = await removeSalesPerson(id);
-            if (!success) {
-                setActionError('Failed to remove sales person. They may have associated customers.');
-            }
+            await deleteSalesPersonMutation.mutateAsync(id);
         } catch (err: any) {
-            setActionError('An unexpected error occurred while removing sales person');
-        } finally {
-            setActionLoading(null);
+            setActionError(err.message || 'Failed to remove sales person');
         }
     };
 
@@ -182,12 +132,19 @@ export const useSettings = () => {
         setActionError(null);
     };
 
+    const actionLoading = addBrandMutation.isPending ? 'add-brand' :
+        updateBrandMutation.isPending ? editingBrandId :
+            deleteBrandMutation.isPending ? deleteBrandMutation.variables : // Simplified
+                addSalesPersonMutation.isPending ? 'add-sales-person' :
+                    updateSalesPersonMutation.isPending ? editingSalesPersonId :
+                        deleteSalesPersonMutation.isPending ? deleteSalesPersonMutation.variables : null;
+
     return {
         brands,
         salesPersons,
-        loading: inventoryLoading || salesPersonsLoading,
-        error: inventoryError || salesPersonsError,
-        actionLoading,
+        loading: brandsLoading || sPLoading,
+        error: brandsError || sPError,
+        actionLoading: actionLoading as string | null,
         actionError,
         setActionError,
 

@@ -6,20 +6,19 @@ import CustomerForm from '../components/CustomerForm';
 import ErrorMessage from '../components/ErrorMessage';
 import { KPISkeleton } from '../components/skeletons/KPISkeleton';
 import { CustomerSkeleton } from '../components/skeletons/CustomerSkeleton';
-import { useCustomers } from '../context/CustomerContext';
+import { useCustomersQuery, useSalesPersonsQuery } from '../hooks/queries/useCustomerQueries';
+import { useUserRole } from '../hooks/useUserRole';
 import { Customer, FollowUpStatus, ReferralSource } from '../types';
 import { Plus } from 'lucide-react';
 import { parseISO, isWithinInterval, isToday } from 'date-fns';
 
 const TodayFollowUpsPage: React.FC = () => {
-  const {
-    customers,
-    loading,
-    error,
-    salesPersons,
-    currentRole,
-    currentUser
-  } = useCustomers();
+  const { data: customers = [], isLoading: customersLoading, error: customersError } = useCustomersQuery();
+  const { data: salesPersons = [], isLoading: spLoading } = useSalesPersonsQuery();
+  const { currentRole, user: currentUser } = useUserRole();
+
+  const loading = customersLoading || spLoading;
+  const error = (customersError as any)?.message || null;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSalesPerson, setSelectedSalesPerson] = useState('');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Product } from '../../types/inventory';
-import { useInventory } from '../../context/InventoryContext';
+import { useAddSaleEntryMutation } from '../../hooks/queries/useInventoryQueries';
 import { X } from 'lucide-react';
 
 type SaleEntryFormProps = {
@@ -9,8 +9,7 @@ type SaleEntryFormProps = {
 };
 
 const SaleEntryForm: React.FC<SaleEntryFormProps> = ({ product, onClose }) => {
-    const { addSaleEntry } = useInventory();
-    const [loading, setLoading] = useState(false);
+    const addSaleEntryMutation = useAddSaleEntryMutation();
     const [formData, setFormData] = useState({
         saleDate: new Date().toISOString().split('T')[0],
         customerName: '',
@@ -31,26 +30,18 @@ const SaleEntryForm: React.FC<SaleEntryFormProps> = ({ product, onClose }) => {
             return;
         }
 
-        setLoading(true);
         try {
-            const success = await addSaleEntry({
+            await addSaleEntryMutation.mutateAsync({
                 productId: product.id,
                 saleDate: formData.saleDate,
                 customerName: formData.customerName,
                 billNumber: formData.billNumber || undefined,
                 quantitySold: formData.quantitySold
             });
-
-            if (success) {
-                onClose();
-            } else {
-                alert('Failed to add sale entry');
-            }
-        } catch (error) {
+            onClose();
+        } catch (error: any) {
             console.error('Error adding sale entry:', error);
-            alert('An error occurred');
-        } finally {
-            setLoading(false);
+            alert(error.message || 'An error occurred');
         }
     };
 
@@ -126,10 +117,10 @@ const SaleEntryForm: React.FC<SaleEntryFormProps> = ({ product, onClose }) => {
                         </button>
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={addSaleEntryMutation.isPending}
                             className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm"
                         >
-                            {loading ? 'Adding...' : 'Add Sale'}
+                            {addSaleEntryMutation.isPending ? 'Adding...' : 'Add Sale'}
                         </button>
                     </div>
                 </form>

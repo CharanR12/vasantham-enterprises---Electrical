@@ -1,7 +1,5 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { CustomerProvider } from './context/CustomerContext';
-import { InventoryProvider } from './context/InventoryContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ExportProvider from './components/ExportProvider';
 import Layout from './components/Layout';
@@ -19,25 +17,21 @@ function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <CustomerProvider>
-              <InventoryProvider>
-                <ExportProvider>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<TodayFollowUpsPage />} />
-                      <Route path="/inventory" element={<InventoryPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                      <Route path="/analytics" element={<AnalyticsPage />} />
-                      {/* Legacy routes for backward compatibility */}
-                      <Route path="/admin" element={<SettingsPage />} />
-                      <Route path="/inventory/settings" element={<SettingsPage />} />
-                      {/* Catch-all for protected routes */}
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </Layout>
-                </ExportProvider>
-              </InventoryProvider>
-            </CustomerProvider>
+            <ExportProvider>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<TodayFollowUpsPage />} />
+                  <Route path="/inventory" element={<InventoryPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/analytics" element={<AnalyticsPage />} />
+                  {/* Legacy routes for backward compatibility */}
+                  <Route path="/admin" element={<SettingsPage />} />
+                  <Route path="/inventory/settings" element={<SettingsPage />} />
+                  {/* Catch-all for protected routes */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Layout>
+            </ExportProvider>
           </ProtectedRoute>
         }
       />

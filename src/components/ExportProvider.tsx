@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { useCustomers } from '../context/CustomerContext';
-import { useInventory } from '../context/InventoryContext';
+import { useCustomersQuery, useSalesPersonsQuery } from '../hooks/queries/useCustomerQueries';
+import { useProductsQuery, useBrandsQuery, useSalesEntriesQuery } from '../hooks/queries/useInventoryQueries';
 import { exportToExcel } from '../utils/excelExport';
 
 type ExportProviderProps = {
@@ -8,8 +8,11 @@ type ExportProviderProps = {
 };
 
 const ExportProvider: React.FC<ExportProviderProps> = ({ children }) => {
-  const { customers, salesPersons } = useCustomers();
-  const { products, brands, salesEntries } = useInventory();
+  const { data: customers = [] } = useCustomersQuery();
+  const { data: salesPersons = [] } = useSalesPersonsQuery();
+  const { data: products = [] } = useProductsQuery();
+  const { data: brands = [] } = useBrandsQuery();
+  const { data: salesEntries = [] } = useSalesEntriesQuery();
 
   useEffect(() => {
     // Make inventory data available globally for export

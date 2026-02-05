@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { Customer, ReferralSource, SalesPerson, FollowUpStatus } from '../types';
-import { useCustomers } from '../context/CustomerContext';
+import {
+    useAddCustomerMutation,
+    useUpdateCustomerMutation,
+    useDeleteCustomerMutation
+} from './queries/useCustomerQueries';
 
 export const useCustomerForm = (customer: Customer | undefined, salesPersons: SalesPerson[], onClose: () => void) => {
-    const { addCustomer, updateCustomer, deleteCustomer, error: serverError } = useCustomers();
+    const addCustomerMutation = useAddCustomerMutation();
+    const updateCustomerMutation = useUpdateCustomerMutation();
+    const deleteCustomerMutation = useDeleteCustomerMutation();
+
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [deleteLoading, setDeleteLoading] = useState(false);
-    const [formLoading, setFormLoading] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
 
     const initialFollowUp = {
@@ -52,24 +57,17 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
-        setFormLoading(true);
         setFormError(null);
 
         try {
-            let success = false;
             if (customer) {
-                success = await updateCustomer(formData as Customer);
+                await updateCustomerMutation.mutateAsync(formData as Customer);
             } else {
-                success = await addCustomer(formData as Omit<Customer, 'id' | 'createdAt'>);
+                await addCustomerMutation.mutateAsync(formData as Omit<Customer, 'id' | 'createdAt'>);
             }
-
-            if (success) {
-                onClose();
-            }
-        } catch (err) {
-            setFormError('An unexpected error occurred. Please try again.');
-        } finally {
-            setFormLoading(false);
+            onClose();
+        } catch (err: any) {
+            setFormError(err.message || 'An unexpected error occurred. Please try again.');
         }
     };
 
@@ -77,16 +75,12 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
         if (!customer) return;
 
         try {
-            setDeleteLoading(true);
             setFormError(null);
-            const success = await deleteCustomer(customer.id);
-            if (success) {
-                onClose();
-            }
-        } catch (err) {
-            setFormError('Failed to delete customer. Please try again.');
+            await deleteCustomerMutation.mutateAsync(customer.id);
+            onClose();
+        } catch (err: any) {
+            setFormError(err.message || 'Failed to delete customer. Please try again.');
         } finally {
-            setDeleteLoading(false);
             setShowDeleteConfirm(false);
         }
     };
@@ -138,11 +132,11 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
         formData,
         setFormData,
         errors,
-        formLoading,
-        deleteLoading,
+        formLoading: addCustomerMutation.isPending || updateCustomerMutation.isPending,
+        deleteLoading: deleteCustomerMutation.isPending,
         formError,
         setFormError,
-        serverError,
+        serverError: addCustomerMutation.error?.message || updateCustomerMutation.error?.message || deleteCustomerMutation.error?.message || null,
         showDeleteConfirm,
         setShowDeleteConfirm,
         handleSubmit,

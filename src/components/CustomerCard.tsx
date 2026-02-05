@@ -4,14 +4,14 @@ import { Phone, MapPin, Calendar, Pencil, Copy, Check, ExternalLink, Clock, Doll
 import { format, parse, isFuture, parseISO } from 'date-fns';
 import CustomerForm from './CustomerForm';
 import FollowUpModal from './FollowUpModal';
-import { useCustomers } from '../context/CustomerContext';
+import { useSalesPersonsQuery } from '../hooks/queries/useCustomerQueries';
 
 type CustomerCardProps = {
   customer: Customer;
 };
 
 const CustomerCard: React.FC<CustomerCardProps> = ({ customer }) => {
-  const { salesPersons } = useCustomers();
+  const { data: salesPersons = [] } = useSalesPersonsQuery();
   const [copiedFields, setCopiedFields] = useState<Record<string, boolean>>({});
   const [showEditForm, setShowEditForm] = useState(false);
   const [showFollowUps, setShowFollowUps] = useState(false);

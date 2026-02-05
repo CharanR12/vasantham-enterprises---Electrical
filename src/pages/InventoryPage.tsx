@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useInventory } from '../context/InventoryContext';
+import { useProductsQuery, useBrandsQuery, useSalesEntriesQuery } from '../hooks/queries/useInventoryQueries';
 import InventorySearchFilter from '../components/inventory/InventorySearchFilter';
 import InventoryKPICards from '../components/inventory/InventoryKPICards';
 import ProductCard from '../components/inventory/ProductCard';
@@ -7,18 +7,20 @@ import ProductForm from '../components/inventory/ProductForm';
 import ErrorMessage from '../components/ErrorMessage';
 import { KPISkeleton } from '../components/skeletons/KPISkeleton';
 import { ProductSkeleton } from '../components/skeletons/ProductSkeleton';
-import { Product } from '../types/inventory';
+import { Product, SaleEntry } from '../types/inventory';
 import { Plus } from 'lucide-react';
 
 const InventoryPage: React.FC = () => {
-  const {
-    products,
-    brands,
-    salesEntries,
-    loading,
-    error,
-    getSalesForProduct
-  } = useInventory();
+  const { data: products = [], isLoading: productsLoading, error: productsError } = useProductsQuery();
+  const { data: brands = [], isLoading: brandsLoading } = useBrandsQuery();
+  const { data: salesEntries = [], isLoading: salesLoading, error: salesError } = useSalesEntriesQuery();
+
+  const loading = productsLoading || brandsLoading || salesLoading;
+  const error = (productsError as any)?.message || (salesError as any)?.message || null;
+
+  const getSalesForProduct = (productId: string): SaleEntry[] => {
+    return salesEntries.filter(entry => entry.productId === productId);
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');

@@ -2,7 +2,7 @@ import React from 'react';
 import { Settings, BarChart3, Download, Building2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserButton, useClerk } from '@clerk/clerk-react';
-import { useCustomers } from '../context/CustomerContext';
+import { useCustomersQuery, useSalesPersonsQuery } from '../hooks/queries/useCustomerQueries';
 import { exportToExcel } from '../utils/excelExport';
 
 type LayoutProps = {
@@ -12,7 +12,8 @@ type LayoutProps = {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { openOrganizationProfile } = useClerk();
-  const { customers, salesPersons } = useCustomers();
+  const { data: customers = [] } = useCustomersQuery();
+  const { data: salesPersons = [] } = useSalesPersonsQuery();
 
   const isSettingsPage = location.pathname.includes('/settings') || location.pathname === '/admin';
   const isInventoryPage = location.pathname === '/inventory';
