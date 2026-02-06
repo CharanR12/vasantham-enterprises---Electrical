@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAnalyticsData } from '../hooks/useAnalyticsData';
 import { AnalyticsHeader } from '../components/analytics/AnalyticsHeader';
@@ -17,7 +16,6 @@ import ErrorMessage from '../components/ErrorMessage';
 import { exportDailySalesToExcel } from '../utils/analyticsExport';
 
 const AnalyticsPage: React.FC = () => {
-  const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('month');
   const [activeTab, setActiveTab] = useState<'overview' | 'daily-sales'>('overview');
 
@@ -81,7 +79,6 @@ const AnalyticsPage: React.FC = () => {
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         onExport={handleExport}
-        onBack={() => navigate(-1)}
         loading={loading}
       />
 

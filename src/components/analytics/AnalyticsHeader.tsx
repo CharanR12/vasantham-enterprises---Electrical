@@ -1,12 +1,11 @@
 import React from 'react';
-import { ArrowLeft, Download, Calendar, Filter } from 'lucide-react';
+import { Download, Calendar, Filter } from 'lucide-react';
 
 interface AnalyticsHeaderProps {
     activeTab: 'overview' | 'daily-sales';
     selectedPeriod: 'week' | 'month' | 'all';
     onPeriodChange: (period: 'week' | 'month' | 'all') => void;
     onExport: () => void;
-    onBack: () => void;
     loading?: boolean;
 }
 
@@ -15,26 +14,13 @@ export const AnalyticsHeader: React.FC<AnalyticsHeaderProps> = ({
     selectedPeriod,
     onPeriodChange,
     onExport,
-    onBack,
     loading
 }) => {
     return (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center space-x-4">
-                <button
-                    onClick={onBack}
-                    className="flex items-center text-slate-500 hover:text-brand-600 font-bold transition-all duration-300 group"
-                >
-                    <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mr-3 group-hover:scale-110 transition-transform">
-                        <ArrowLeft className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm tracking-tight uppercase tracking-widest hidden sm:inline">Back</span>
-                </button>
-                <div className="h-8 w-[1px] bg-slate-200 hidden sm:block"></div>
-                <div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Intelligence Hub</h1>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Performance & Operations Analytics</p>
-                </div>
+            <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Analytics</h1>
+                <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Performance & Operations</p>
             </div>
 
             <div className="flex items-center space-x-3">

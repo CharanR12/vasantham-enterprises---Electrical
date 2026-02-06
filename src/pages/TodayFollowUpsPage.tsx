@@ -3,16 +3,19 @@ import SearchFilter from '../components/SearchFilter';
 import KPICards from '../components/KPICards';
 import CustomerCard from '../components/CustomerCard';
 import CustomerForm from '../components/CustomerForm';
+import FollowUpModal from '../components/FollowUpModal';
 import ErrorMessage from '../components/ErrorMessage';
 import { KPISkeleton } from '../components/skeletons/KPISkeleton';
 import { CustomerSkeleton } from '../components/skeletons/CustomerSkeleton';
 import { useCustomersQuery, useSalesPersonsQuery } from '../hooks/queries/useCustomerQueries';
 import { useUserRole } from '../hooks/useUserRole';
 import { Customer, FollowUpStatus, ReferralSource } from '../types';
-import { Plus } from 'lucide-react';
+import CustomerTable from '../components/CustomerTable';
+import { Plus, LayoutGrid, Table } from 'lucide-react';
 import { parseISO, isWithinInterval, isToday } from 'date-fns';
 
 const TodayFollowUpsPage: React.FC = () => {
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const { data: customers = [], isLoading: customersLoading, error: customersError } = useCustomersQuery();
   const { data: salesPersons = [], isLoading: spLoading } = useSalesPersonsQuery();
   const { currentRole, user: currentUser } = useUserRole();
@@ -25,6 +28,8 @@ const TodayFollowUpsPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<FollowUpStatus | ''>('');
   const [selectedReferralSource, setSelectedReferralSource] = useState<ReferralSource | ''>('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [viewingFollowUps, setViewingFollowUps] = useState<Customer | null>(null);
 
   // Follow-up Date Filter
   const [followUpFilter, setFollowUpFilter] = useState<'all' | 'today' | 'custom'>('all');
@@ -42,7 +47,7 @@ const TodayFollowUpsPage: React.FC = () => {
 
   const [amountReceivedFilter, setAmountReceivedFilter] = useState<'all' | 'received' | 'not-received'>('all');
 
-  const filterCustomers = (): Customer[] => {
+  const filtered = React.useMemo(() => {
     return customers.filter((customer) => {
       // Role-based filtering
       if (currentRole === 'user' && currentUser && customer.salesPerson.id !== currentUser.id) {
@@ -115,9 +120,7 @@ const TodayFollowUpsPage: React.FC = () => {
         matchesFollowUpDate &&
         matchesCreationDate;
     });
-  };
-
-  const filtered = filterCustomers();
+  }, [customers, currentRole, currentUser, searchTerm, selectedSalesPerson, selectedStatus, selectedReferralSource, amountReceivedFilter, followUpFilter, followUpDateRange, creationFilter, creationDateRange]);
 
   // Removed full-page loading in favor of integrated skeletons
 
@@ -129,6 +132,12 @@ const TodayFollowUpsPage: React.FC = () => {
           className="mb-6 rounded-2xl shadow-sm border-red-100"
         />
       )}
+
+      {/* Page Header */}
+      <div className="animate-fadeIn">
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Sales</h1>
+        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Customer Follow-ups</p>
+      </div>
 
       <div className="animate-fadeIn">
         <SearchFilter
@@ -154,48 +163,85 @@ const TodayFollowUpsPage: React.FC = () => {
         />
       </div>
 
+      <div className="flex justify-between items-center animate-fadeIn [animation-delay:50ms]">
+        <div className="flex items-center space-x-2 bg-white/50 p-1.5 rounded-2xl border border-slate-200/60 shadow-sm">
+          <button
+            onClick={() => setViewMode('card')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewMode === 'card'
+              ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span>Cards</span>
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${viewMode === 'table'
+              ? 'bg-brand-600 text-white shadow-lg shadow-brand-500/20'
+              : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+              }`}
+          >
+            <Table className="h-3.5 w-3.5" />
+            <span>Table</span>
+          </button>
+        </div>
+      </div>
+
       <div className="animate-fadeIn [animation-delay:100ms]">
         {loading ? <KPISkeleton /> : <KPICards customers={filtered} />}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn [animation-delay:200ms]">
-        {loading ? (
-          <>
-            <CustomerSkeleton />
-            <CustomerSkeleton />
-            <CustomerSkeleton />
-            <CustomerSkeleton />
-            <CustomerSkeleton />
-            <CustomerSkeleton />
-          </>
-        ) : filtered.length > 0 ? (
-          filtered.map((customer) => (
-            <CustomerCard
-              key={customer.id}
-              customer={customer}
+      {viewMode === 'table' && !loading ? (
+        <div className="animate-fadeIn [animation-delay:200ms]">
+          <div className="animate-fadeIn [animation-delay:200ms]">
+            <CustomerTable
+              customers={filtered}
+              onEdit={setEditingCustomer}
+              onViewLog={setViewingFollowUps}
             />
-          ))
-        ) : (
-          <div className="col-span-full premium-card py-16 text-center border-dashed">
-            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
-              <Plus className="h-8 w-8 text-slate-300" />
-            </div>
-            <p className="text-slate-500 font-medium">No customers match your current filters.</p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedStatus('');
-                setFollowUpFilter('all');
-                setCreationFilter('all');
-                setSelectedSalesPerson('');
-              }}
-              className="mt-4 text-brand-600 font-bold hover:underline underline-offset-4"
-            >
-              Clear all filters
-            </button>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn [animation-delay:200ms]">
+          {loading ? (
+            <>
+              <CustomerSkeleton />
+              <CustomerSkeleton />
+              <CustomerSkeleton />
+              <CustomerSkeleton />
+              <CustomerSkeleton />
+              <CustomerSkeleton />
+            </>
+          ) : filtered.length > 0 ? (
+            filtered.map((customer) => (
+              <CustomerCard
+                key={customer.id}
+                customer={customer}
+              />
+            ))
+          ) : (
+            <div className="col-span-full premium-card py-16 text-center border-dashed">
+              <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                <Plus className="h-8 w-8 text-slate-300" />
+              </div>
+              <p className="text-slate-500 font-medium">No customers match your current filters.</p>
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedStatus('');
+                  setFollowUpFilter('all');
+                  setCreationFilter('all');
+                  setSelectedSalesPerson('');
+                }}
+                className="mt-4 text-brand-600 font-bold hover:underline underline-offset-4"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         onClick={() => setShowAddForm(true)}
@@ -204,6 +250,23 @@ const TodayFollowUpsPage: React.FC = () => {
       >
         <Plus className="h-7 w-7" />
       </button>
+
+      {/* Edit Form for Table Selection */}
+      {editingCustomer && (
+        <CustomerForm
+          customer={editingCustomer}
+          onClose={() => setEditingCustomer(null)}
+          salesPersons={salesPersons}
+        />
+      )}
+
+      {/* View Logs Modal */}
+      {viewingFollowUps && (
+        <FollowUpModal
+          customer={viewingFollowUps}
+          onClose={() => setViewingFollowUps(null)}
+        />
+      )}
 
       {showAddForm && (
         <CustomerForm onClose={() => setShowAddForm(false)} salesPersons={salesPersons} />

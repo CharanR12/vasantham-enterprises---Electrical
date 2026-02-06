@@ -29,6 +29,13 @@ export const productService = {
                 modelNumber: product.model_number,
                 quantityAvailable: product.quantity_available,
                 arrivalDate: product.arrival_date,
+                mrp: product.mrp || 0,
+                purchaseRate: product.purchase_rate || 0,
+                purchaseDiscountPercent: product.purchase_discount_percent || 0,
+                purchaseDiscountedPrice: product.purchase_discounted_price || 0,
+                salePrice: product.sale_price || 0,
+                saleDiscountPercent: product.sale_discount_percent || 0,
+                saleDiscountAmount: product.sale_discount_amount || 0,
                 createdAt: product.created_at.split('T')[0]
             }));
         } catch (error) {
@@ -48,6 +55,13 @@ export const productService = {
                     model_number: productData.modelNumber,
                     quantity_available: productData.quantityAvailable,
                     arrival_date: productData.arrivalDate,
+                    mrp: productData.mrp,
+                    purchase_rate: productData.purchaseRate,
+                    purchase_discount_percent: productData.purchaseDiscountPercent,
+                    purchase_discounted_price: productData.purchaseDiscountedPrice,
+                    sale_price: productData.salePrice,
+                    sale_discount_percent: productData.saleDiscountPercent,
+                    sale_discount_amount: productData.saleDiscountAmount,
                     created_by: userId
                 })
                 .select()
@@ -73,7 +87,14 @@ export const productService = {
                     product_name: productData.productName,
                     model_number: productData.modelNumber,
                     quantity_available: productData.quantityAvailable,
-                    arrival_date: productData.arrivalDate
+                    arrival_date: productData.arrivalDate,
+                    mrp: productData.mrp,
+                    purchase_rate: productData.purchaseRate,
+                    purchase_discount_percent: productData.purchaseDiscountPercent,
+                    purchase_discounted_price: productData.purchaseDiscountedPrice,
+                    sale_price: productData.salePrice,
+                    sale_discount_percent: productData.saleDiscountPercent,
+                    sale_discount_amount: productData.saleDiscountAmount
                 })
                 .eq('id', id);
 

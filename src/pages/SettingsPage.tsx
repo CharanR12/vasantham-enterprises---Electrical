@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Package, Users } from 'lucide-react';
+import { Package, Users } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
 import { useSettings } from '../hooks/useSettings';
 import { BrandManagement } from '../components/settings/BrandManagement';
 import { SalesForceManagement } from '../components/settings/SalesForceManagement';
 
 const SettingsPage: React.FC = () => {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'inventory' | 'sales'>('inventory');
 
   const {
@@ -46,16 +44,10 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-12 animate-fadeIn">
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center text-slate-500 hover:text-brand-600 font-bold transition-all duration-300 group"
-        >
-          <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-100 mr-3 group-hover:scale-110 transition-transform">
-            <ArrowLeft className="h-4 w-4" />
-          </div>
-          <span className="text-sm tracking-tight uppercase tracking-widest">Back to Dashboard</span>
-        </button>
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Settings</h1>
+        <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Manage your assets</p>
       </div>
 
       <div className="premium-card overflow-hidden">

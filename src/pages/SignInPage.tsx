@@ -1,5 +1,6 @@
 import React from 'react';
-import { SignIn } from '@clerk/clerk-react';
+import { SignIn, ClerkLoaded, ClerkLoading } from '@clerk/clerk-react';
+import { SignInSkeleton } from '@/components/skeletons/SignInSkeleton';
 
 const SignInPage: React.FC = () => {
     return (
@@ -62,29 +63,34 @@ const SignInPage: React.FC = () => {
 
                     <div className="bg-white/70 backdrop-blur-2xl rounded-[2.5rem] p-2 shadow-2xl shadow-slate-200/50 border border-white/50">
                         <div className="bg-white rounded-[2rem] p-2 pb-6 border border-slate-100/50">
-                            <SignIn
-                                routing="path"
-                                path="/sign-in"
-                                signUpUrl="/sign-up"
-                                appearance={{
-                                    elements: {
-                                        formButtonPrimary: 'h-12 bg-brand-600 hover:bg-brand-700 text-sm font-bold rounded-2xl shadow-lg shadow-brand-500/25 transition-all duration-300 normal-case w-full',
-                                        card: 'shadow-none bg-transparent w-full',
-                                        header: 'hidden',
-                                        formFieldLabel: 'text-slate-700 font-bold mb-2 ml-1 text-[11px] uppercase tracking-wider',
-                                        formFieldInput: 'h-12 border-slate-200 bg-slate-50/50 rounded-2xl px-4 focus:bg-white focus:ring-4 focus:ring-brand-500/5 focus:border-brand-500 transition-all duration-200 font-medium text-slate-900',
-                                        footerActionText: 'text-slate-500 font-medium',
-                                        footerActionLink: 'text-brand-600 hover:text-brand-700 font-bold ml-1',
-                                        socialButtonsBlockButton: 'hidden',
-                                        dividerRow: 'hidden',
-                                        formFieldLabelRow: 'mb-0',
-                                        identityPreviewText: 'text-slate-900 font-bold',
-                                        identityPreviewEditButton: 'text-brand-600 font-bold',
-                                        headerTitle: 'hidden',
-                                        headerSubtitle: 'hidden',
-                                    }
-                                }}
-                            />
+                            <ClerkLoading>
+                                <SignInSkeleton />
+                            </ClerkLoading>
+                            <ClerkLoaded>
+                                <SignIn
+                                    routing="path"
+                                    path="/sign-in"
+                                    signUpUrl="/sign-up"
+                                    appearance={{
+                                        elements: {
+                                            formButtonPrimary: 'h-12 bg-brand-600 hover:bg-brand-700 text-sm font-bold rounded-2xl shadow-lg shadow-brand-500/25 transition-all duration-300 normal-case w-full',
+                                            card: 'shadow-none bg-transparent w-full',
+                                            header: 'hidden',
+                                            formFieldLabel: 'text-slate-700 font-bold mb-2 ml-1 text-[11px] uppercase tracking-wider',
+                                            formFieldInput: 'h-12 border-slate-200 bg-slate-50/50 rounded-2xl px-4 focus:bg-white focus:ring-4 focus:ring-brand-500/5 focus:border-brand-500 transition-all duration-200 font-medium text-slate-900',
+                                            footerActionText: 'text-slate-500 font-medium',
+                                            footerActionLink: 'text-brand-600 hover:text-brand-700 font-bold ml-1',
+                                            socialButtonsBlockButton: 'hidden',
+                                            dividerRow: 'hidden',
+                                            formFieldLabelRow: 'mb-0',
+                                            identityPreviewText: 'text-slate-900 font-bold',
+                                            identityPreviewEditButton: 'text-brand-600 font-bold',
+                                            headerTitle: 'hidden',
+                                            headerSubtitle: 'hidden',
+                                        }
+                                    }}
+                                />
+                            </ClerkLoaded>
                         </div>
                     </div>
                 </div>

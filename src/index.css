@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&display=swap');
+@import "ag-grid-community/styles/ag-grid.css";
+@import "ag-grid-community/styles/ag-theme-quartz.css";
 
 @tailwind base;
 @tailwind components;
@@ -135,4 +137,85 @@
 
 .premium-table tr:hover td {
   @apply bg-slate-50/30;
+}
+
+/* AG Grid Premium Customization */
+.ag-theme-quartz.ag-theme-premium {
+  --ag-font-family: 'Google Sans', sans-serif;
+  --ag-font-size: 14px;
+  --ag-grid-size: 8px;
+  --ag-header-background-color: #f8fafc;
+  --ag-header-foreground-color: #64748b;
+  --ag-border-color: #e2e8f0;
+  --ag-header-border-color: #e2e8f0;
+  --ag-row-hover-color: #f8fafc;
+  --ag-selected-row-background-color: #f1f5f9;
+  --ag-header-column-separator-display: none;
+  --ag-border-radius: 16px;
+
+  height: 600px;
+  width: 100%;
+}
+
+.ag-theme-premium .ag-root-wrapper {
+  @apply border-slate-200/60 shadow-premium overflow-hidden;
+  border-radius: 16px !important;
+}
+
+.ag-theme-premium .ag-header {
+  @apply border-b border-slate-200 bg-slate-50/50;
+}
+
+.ag-theme-premium .ag-header-cell-label {
+  @apply text-xs font-bold text-slate-500 uppercase tracking-wider;
+}
+
+.ag-theme-premium .ag-row {
+  @apply transition-colors duration-200;
+}
+
+.ag-theme-premium .ag-cell {
+  @apply flex items-center text-sm text-slate-600 font-normal;
+}
+
+/* Remove Focus Outline - Strong Override */
+.ag-theme-premium .ag-cell-focus,
+.ag-theme-premium .ag-cell:focus,
+.ag-theme-premium .ag-cell:focus-visible,
+.ag-theme-premium :focus,
+.ag-theme-premium :focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Customize Filter Inputs - Match Design System */
+.ag-theme-premium input[class^="ag-"][type="text"],
+.ag-theme-premium input[class^="ag-"][type="number"],
+.ag-theme-premium .ag-input-field-input {
+  @apply bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 !important;
+  min-height: 36px;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  transition: all 0.2s;
+}
+
+.ag-theme-premium input[class^="ag-"][type="text"]:focus,
+.ag-theme-premium input[class^="ag-"][type="number"]:focus,
+.ag-theme-premium .ag-input-field-input:focus {
+  @apply ring-2 ring-brand-500/20 border-brand-500 !important;
+  outline: none !important;
+}
+
+/* Filter Popup Styling */
+.ag-theme-premium .ag-popup-child {
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.ag-theme-premium .ag-filter-toolpanel-header,
+.ag-theme-premium .ag-filter-header-container {
+  @apply bg-slate-50 border-b border-slate-100;
+  padding: 8px 12px !important;
 }

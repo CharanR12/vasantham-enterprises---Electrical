@@ -7,6 +7,8 @@ import TodayFollowUpsPage from './pages/TodayFollowUpsPage';
 import InventoryPage from './pages/InventoryPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import InvoicesPage from './pages/InvoicesPage';
+import FilesPage from './pages/FilesPage';
 import SignInPage from './pages/SignInPage';
 
 function App() {
@@ -22,6 +24,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<TodayFollowUpsPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
+                  <Route path="/invoices" element={<InvoicesPage />} />
+                  <Route path="/files" element={<FilesPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                   {/* Legacy routes for backward compatibility */}

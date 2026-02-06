@@ -52,7 +52,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-md max-h-[92vh] p-0 overflow-hidden rounded-2xl">
+        <DialogContent className="max-w-md max-h-[92vh] p-0 overflow-hidden rounded-2xl flex flex-col">
           <div className="flex justify-between items-center p-4 border-b">
             <DialogHeader>
               <DialogTitle className="text-lg font-semibold">
@@ -179,6 +179,106 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
                   disabled={formLoading || deleteLoading}
                 />
                 {errors.quantityAvailable && <p className="text-red-500 text-xs font-medium ml-1">{errors.quantityAvailable}</p>}
+              </div>
+
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Purchase Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mrp" className="text-sm font-medium text-slate-700">MRP</Label>
+                    <Input
+                      id="mrp"
+                      type="number"
+                      name="mrp"
+                      value={formData.mrp}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="purchaseRate" className="text-sm font-medium text-slate-700">Purchase Rate</Label>
+                    <Input
+                      id="purchaseRate"
+                      type="number"
+                      name="purchaseRate"
+                      value={formData.purchaseRate}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="purchaseDiscountPercent" className="text-sm font-medium text-slate-700">Discount %</Label>
+                    <Input
+                      id="purchaseDiscountPercent"
+                      type="number"
+                      name="purchaseDiscountPercent"
+                      value={formData.purchaseDiscountPercent}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="purchaseDiscountedPrice" className="text-sm font-medium text-slate-700">Discounted Price</Label>
+                    <Input
+                      id="purchaseDiscountedPrice"
+                      type="number"
+                      name="purchaseDiscountedPrice"
+                      value={formData.purchaseDiscountedPrice}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sale Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="salePrice" className="text-sm font-medium text-slate-700">Sale Price</Label>
+                    <Input
+                      id="salePrice"
+                      type="number"
+                      name="salePrice"
+                      value={formData.salePrice}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="saleDiscountPercent" className="text-sm font-medium text-slate-700">Discount %</Label>
+                    <Input
+                      id="saleDiscountPercent"
+                      type="number"
+                      name="saleDiscountPercent"
+                      value={formData.saleDiscountPercent}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="saleDiscountAmount" className="text-sm font-medium text-slate-700">Discount Amount</Label>
+                  <Input
+                    id="saleDiscountAmount"
+                    type="number"
+                    name="saleDiscountAmount"
+                    value={formData.saleDiscountAmount}
+                    onChange={handleChange}
+                    className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
+                    disabled={formLoading || deleteLoading}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
