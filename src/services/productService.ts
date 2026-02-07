@@ -36,7 +36,8 @@ export const productService = {
                 salePrice: product.sale_price || 0,
                 saleDiscountPercent: product.sale_discount_percent || 0,
                 saleDiscountAmount: product.sale_discount_amount || 0,
-                createdAt: product.created_at.split('T')[0]
+                createdAt: product.created_at,
+                updatedAt: product.updated_at
             }));
         } catch (error) {
             console.error('Error fetching products:', error);
@@ -56,13 +57,14 @@ export const productService = {
                     quantity_available: productData.quantityAvailable,
                     arrival_date: productData.arrivalDate,
                     mrp: productData.mrp,
-                    purchase_rate: productData.purchaseRate,
+                    // purchase_rate removed from schema
                     purchase_discount_percent: productData.purchaseDiscountPercent,
                     purchase_discounted_price: productData.purchaseDiscountedPrice,
                     sale_price: productData.salePrice,
                     sale_discount_percent: productData.saleDiscountPercent,
-                    sale_discount_amount: productData.saleDiscountAmount,
-                    created_by: userId
+                    // sale_discount_amount removed from UI
+                    created_by: userId,
+                    updated_at: new Date().toISOString()
                 })
                 .select()
                 .single();
@@ -89,19 +91,20 @@ export const productService = {
                     quantity_available: productData.quantityAvailable,
                     arrival_date: productData.arrivalDate,
                     mrp: productData.mrp,
-                    purchase_rate: productData.purchaseRate,
+                    // purchase_rate removed
                     purchase_discount_percent: productData.purchaseDiscountPercent,
                     purchase_discounted_price: productData.purchaseDiscountedPrice,
                     sale_price: productData.salePrice,
                     sale_discount_percent: productData.saleDiscountPercent,
-                    sale_discount_amount: productData.saleDiscountAmount
+                    // sale_discount_amount removed
+                    updated_at: productData.updatedAt || new Date().toISOString()
                 })
                 .eq('id', id);
 
             handleSupabaseError(error);
 
             const products = await productService.getProducts(undefined, clerkToken);
-            return products.find(p => p.id === id)!;
+            return (products || []).find(p => p.id === id)!;
         } catch (error) {
             console.error('Error updating product:', error);
             throw error;

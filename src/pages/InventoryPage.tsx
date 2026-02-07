@@ -69,7 +69,7 @@ const InventoryPage: React.FC = () => {
         ...product,
         // Ensure new fields are mapped if they exist on product, or default them
         discount: product.saleDiscountAmount || 0,
-        purchaseRate: product.purchaseRate || 0,
+        // purchaseRate removed
         purchaseDiscountPercent: product.purchaseDiscountPercent || 0,
         purchaseDiscountedPrice: product.purchaseDiscountedPrice || 0,
         saleDiscountPercent: product.saleDiscountPercent || 0,
@@ -178,7 +178,7 @@ const InventoryPage: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/20 hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
           >
             <FileText className="h-4 w-4" />
-            Create Invoice
+            Create Quotation
           </button>
         )}
       </div>
@@ -234,8 +234,8 @@ const InventoryPage: React.FC = () => {
 
       {/* Floating Action Bar for Select Mode */}
       {isSelectMode && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
-          <div className="bg-slate-900/90 backdrop-blur-md text-white px-2 p-2 rounded-full shadow-2xl flex items-center gap-2 border border-slate-700/50">
+        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300 w-max max-w-[95vw]">
+          <div className="bg-slate-900/90 backdrop-blur-md text-white px-2 p-2 rounded-full shadow-2xl flex items-center gap-2 border border-slate-700/50 overflow-x-auto custom-scrollbar">
             <button
               onClick={() => {
                 setIsSelectMode(false);

@@ -13,13 +13,15 @@ export type Product = {
   quantityAvailable: number;
   arrivalDate: string;
   mrp: number;
-  purchaseRate: number;
   purchaseDiscountPercent: number;
   purchaseDiscountedPrice: number;
   salePrice: number;
   saleDiscountPercent: number;
-  saleDiscountAmount: number;
   createdAt: string;
+  updatedAt?: string;
+  // Optional fields for UI/Invoice selection
+  saleDiscountAmount?: number;
+  discount?: number;
 };
 
 export type SaleEntry = {

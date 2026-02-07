@@ -85,5 +85,56 @@ export const saleEntryService = {
             console.error('Error creating sale entry:', error);
             throw error;
         }
+    },
+
+    deleteSaleEntry: async (id: string, clerkToken?: string): Promise<void> => {
+        try {
+            const client = getClient(clerkToken);
+
+            // 1. Get the sale entry to know product and quantity
+            const { data: saleEntry, error: fetchError } = await client
+                .from('sale_entries')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            handleSupabaseError(fetchError);
+
+            if (!saleEntry) {
+                throw new Error('Sale entry not found');
+            }
+
+            // 2. Get the product to update stock
+            const { data: product, error: productError } = await client
+                .from('products')
+                .select('quantity_available')
+                .eq('id', saleEntry.product_id)
+                .single();
+
+            handleSupabaseError(productError);
+
+            // 3. Delete the sale entry
+            const { error: deleteError } = await client
+                .from('sale_entries')
+                .delete()
+                .eq('id', id);
+
+            handleSupabaseError(deleteError);
+
+            // 4. Update the product stock (add back quantity)
+            if (product) {
+                const { error: updateError } = await client
+                    .from('products')
+                    .update({
+                        quantity_available: product.quantity_available + saleEntry.quantity_sold
+                    })
+                    .eq('id', saleEntry.product_id);
+
+                handleSupabaseError(updateError);
+            }
+        } catch (error) {
+            console.error('Error deleting sale entry:', error);
+            throw error;
+        }
     }
 };

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { driveService, DriveFile } from '../services/driveService';
 import ErrorMessage from '../components/ErrorMessage';
-import { Upload, FileText, Trash2, Download, HardDrive, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Upload, FileText, Trash2, HardDrive, Loader2, ExternalLink, RefreshCw, Search, Image, FileSpreadsheet, File as FileIcon, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 
 const FilesPage: React.FC = () => {
@@ -11,6 +11,9 @@ const FilesPage: React.FC = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [quota, setQuota] = useState<{ limit: string, usage: string } | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState<'all' | 'pdf' | 'image' | 'spreadsheet' | 'doc' | 'folder'>('all');
+    const [sortBy, setSortBy] = useState<'date' | 'name' | 'size'>('date');
 
     const loadFiles = async () => {
         setIsLoading(true);
@@ -104,6 +107,44 @@ const FilesPage: React.FC = () => {
         return limit > 0 ? (usage / limit) * 100 : 0;
     };
 
+    const filteredFiles = files.filter(file => {
+        const matchesSearch = file.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = filterType === 'all'
+            ? true
+            : filterType === 'pdf' ? file.mimeType.includes('pdf')
+                : filterType === 'image' ? file.mimeType.includes('image')
+                    : filterType === 'spreadsheet' ? (file.mimeType.includes('sheet') || file.mimeType.includes('excel'))
+                        : filterType === 'doc' ? (file.mimeType.includes('word') || file.mimeType.includes('document'))
+                            : filterType === 'folder' ? file.mimeType.includes('folder')
+                                : true;
+        return matchesSearch && matchesType;
+    }).sort((a, b) => {
+        if (sortBy === 'date') {
+            return new Date(b.createdTime || 0).getTime() - new Date(a.createdTime || 0).getTime();
+        } else if (sortBy === 'name') {
+            return a.name.localeCompare(b.name);
+        } else if (sortBy === 'size') {
+            return parseInt(b.size || '0') - parseInt(a.size || '0');
+        }
+        return 0;
+    });
+
+    const getFileIcon = (mimeType: string) => {
+        if (mimeType.includes('pdf')) return <FileText className="h-8 w-8 text-red-500" />;
+        if (mimeType.includes('image')) return <Image className="h-8 w-8 text-purple-500" />;
+        if (mimeType.includes('sheet') || mimeType.includes('excel')) return <FileSpreadsheet className="h-8 w-8 text-green-500" />;
+        if (mimeType.includes('word') || mimeType.includes('document')) return <FileText className="h-8 w-8 text-blue-500" />;
+        return <FileIcon className="h-8 w-8 text-slate-400" />;
+    };
+
+    const getFileColorBg = (mimeType: string) => {
+        if (mimeType.includes('pdf')) return 'bg-red-50 group-hover:bg-red-100';
+        if (mimeType.includes('image')) return 'bg-purple-50 group-hover:bg-purple-100';
+        if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'bg-green-50 group-hover:bg-green-100';
+        if (mimeType.includes('word') || mimeType.includes('document')) return 'bg-blue-50 group-hover:bg-blue-100';
+        return 'bg-slate-50 group-hover:bg-slate-100';
+    };
+
     return (
         <div className="space-y-8 animate-fadeIn pb-24">
             {/* Header */}
@@ -154,16 +195,82 @@ const FilesPage: React.FC = () => {
                         )}
                         <div className="relative flex items-center gap-2 z-10">
                             {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                            {isUploading ? `Uploading ${uploadProgress}%` : 'Upload PDF'}
+                            {isUploading ? `Uploading ${uploadProgress}%` : 'Upload File'}
                         </div>
                         <input
                             type="file"
-                            accept="application/pdf"
+                            accept=".pdf, .png, .jpg, .jpeg, .doc, .docx, .xls, .xlsx, application/pdf, image/*, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             className="hidden"
                             onChange={handleFileUpload}
                             disabled={isUploading}
                         />
                     </label>
+                </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="relative w-full md:w-96">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <input
+                        type="text"
+                        placeholder="Search files..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                    />
+                </div>
+
+                <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+                    <button
+                        onClick={() => setFilterType('all')}
+                        className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${filterType === 'all' ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        All Files
+                    </button>
+                    <button
+                        onClick={() => setFilterType('pdf')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${filterType === 'pdf' ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        <FileText className="h-4 w-4" />
+                        PDFs
+                    </button>
+                    <button
+                        onClick={() => setFilterType('image')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${filterType === 'image' ? 'bg-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        <Image className="h-4 w-4" />
+                        Images
+                    </button>
+                    <button
+                        onClick={() => setFilterType('doc')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${filterType === 'doc' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        <FileText className="h-4 w-4" />
+                        Docs
+                    </button>
+                    <button
+                        onClick={() => setFilterType('spreadsheet')}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${filterType === 'spreadsheet' ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+                    >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Sheets
+                    </button>
+
+                    <div className="h-8 w-px bg-slate-200 mx-2 hidden md:block"></div>
+
+                    <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4 text-slate-400" />
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as any)}
+                            className="bg-transparent text-sm font-bold text-slate-700 focus:outline-none cursor-pointer"
+                        >
+                            <option value="date">Date</option>
+                            <option value="name">Name</option>
+                            <option value="size">Size</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -175,13 +282,13 @@ const FilesPage: React.FC = () => {
                     <Loader2 className="h-10 w-10 animate-spin mb-4 text-brand-500" />
                     <p className="font-medium animate-pulse">Loading files...</p>
                 </div>
-            ) : files.length > 0 ? (
+            ) : filteredFiles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {files.map((file) => (
+                    {filteredFiles.map((file) => (
                         <div key={file.id} className="group premium-card p-5 relative hover:-translate-y-1 transition-all duration-300">
                             <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-red-50 rounded-2xl group-hover:bg-red-100 transition-colors">
-                                    <FileText className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 rounded-2xl transition-colors ${getFileColorBg(file.mimeType)}`}>
+                                    {getFileIcon(file.mimeType)}
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <a
@@ -219,11 +326,11 @@ const FilesPage: React.FC = () => {
             ) : (
                 <div className="premium-card py-20 text-center border-dashed">
                     <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                        <HardDrive className="h-10 w-10 text-slate-300" />
+                        <Search className="h-10 w-10 text-slate-300" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">No files yet</h3>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">No files found</h3>
                     <p className="text-slate-500 font-medium max-w-xs mx-auto mb-6">
-                        Upload your first PDF document to the common drive.
+                        {searchTerm || filterType !== 'all' ? 'Try adjusting your search or filters.' : 'Upload your first PDF document to the common drive.'}
                     </p>
                 </div>
             )}

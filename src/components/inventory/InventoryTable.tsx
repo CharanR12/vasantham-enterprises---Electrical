@@ -78,47 +78,71 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onVie
         {
             field: 'quantityAvailable',
             headerName: 'In Stock',
-            flex: 1,
-            minWidth: 120,
+            width: 100,
             cellRenderer: QuantityRenderer,
             sort: 'desc'
         },
         {
-            field: 'mrp',
-            headerName: 'MRP',
-            width: 100,
-            cellRenderer: (params: any) => `₹${params.value?.toLocaleString() || 0}`
+            headerName: 'Purchase Info',
+            children: [
+                {
+                    field: 'mrp',
+                    headerName: 'MRP',
+                    width: 90,
+                    cellRenderer: (params: any) => `₹${params.value?.toLocaleString() || 0}`
+                },
+                // Removed Basic Rate column as per user request
+                {
+                    field: 'purchaseDiscountPercent',
+                    headerName: 'Pur Disc',
+                    width: 80,
+                    cellRenderer: (params: any) => (
+                        <span className="text-slate-500 font-medium">{params.value}%</span>
+                    )
+                },
+                {
+                    field: 'purchaseDiscountedPrice',
+                    headerName: 'Pur Rate',
+                    width: 100,
+                    cellRenderer: (params: any) => (
+                        <span className="font-bold text-slate-700">₹{params.value?.toLocaleString() || 0}</span>
+                    )
+                }
+            ]
         },
         {
-            field: 'purchaseDiscountedPrice',
-            headerName: 'Purchase (Disc.)',
-            width: 140,
-            cellRenderer: (params: any) => (
-                <div className="flex flex-col leading-tight">
-                    <span className="font-bold">₹{params.value?.toLocaleString() || 0}</span>
-                    <span className="text-[10px] text-slate-500">{params.data.purchaseDiscountPercent}% off</span>
-                </div>
-            )
+            headerName: 'Sales Info',
+            children: [
+                {
+                    field: 'saleDiscountPercent',
+                    headerName: 'Sales Disc',
+                    width: 100,
+                    cellRenderer: (params: any) => (
+                        <span className="text-slate-500 font-medium">{params.value}%</span>
+                    )
+                },
+                {
+                    field: 'salePrice',
+                    headerName: 'Net Rate',
+                    width: 100,
+                    cellRenderer: (params: any) => (
+                        <span className="font-bold text-emerald-600">₹{parseFloat(params.value || 0).toLocaleString()}</span>
+                    )
+                }
+            ]
         },
         {
-            field: 'salePrice',
-            headerName: 'Sale Price',
+            field: 'updatedAt',
+            headerName: 'Last Updated',
             width: 120,
-            cellRenderer: (params: any) => `₹${params.value?.toLocaleString() || 0}`
-        },
-        {
-            field: 'arrivalDate',
-            headerName: 'Arrival Date',
-            flex: 1,
-            minWidth: 130,
-            cellRenderer: (params: any) => formatDate(params.value)
+            valueFormatter: (params: any) => params.value ? formatDate(params.value) : '-'
         },
         {
             headerName: 'Actions',
-            width: 120,
+            width: 90,
             pinned: 'right',
             cellRenderer: (params: any) => (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     <button
                         onClick={() => onEdit(params.data)}
                         className="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"

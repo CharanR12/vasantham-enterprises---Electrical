@@ -33,7 +33,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         purchaseDiscountedPrice: '' as number | '',
         salePrice: '' as number | '',
         saleDiscountPercent: '' as number | '',
-        saleDiscountAmount: '' as number | ''
+        updatedAt: '' as string | undefined
     };
 
     const [formData, setFormData] = useState(product ? {
@@ -43,13 +43,14 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         quantityAvailable: product.quantityAvailable || '' as number | '',
         arrivalDate: product.arrivalDate,
         mrp: product.mrp || '' as number | '',
-        purchaseRate: product.purchaseRate || '' as number | '',
+        // purchaseRate removed
         purchaseDiscountPercent: product.purchaseDiscountPercent || '' as number | '',
         purchaseDiscountedPrice: product.purchaseDiscountedPrice || '' as number | '',
         salePrice: product.salePrice || '' as number | '',
         saleDiscountPercent: product.saleDiscountPercent || '' as number | '',
-        saleDiscountAmount: product.saleDiscountAmount || '' as number | ''
-    } : initialState);
+
+        updatedAt: product.updatedAt
+    } : { ...initialState, updatedAt: new Date().toISOString() });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -82,12 +83,13 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
                 ...formData,
                 quantityAvailable: formData.quantityAvailable === '' ? 0 : formData.quantityAvailable,
                 mrp: formData.mrp === '' ? 0 : formData.mrp,
-                purchaseRate: formData.purchaseRate === '' ? 0 : formData.purchaseRate,
+                // purchaseRate removed
                 purchaseDiscountPercent: formData.purchaseDiscountPercent === '' ? 0 : formData.purchaseDiscountPercent,
                 purchaseDiscountedPrice: formData.purchaseDiscountedPrice === '' ? 0 : formData.purchaseDiscountedPrice,
                 salePrice: formData.salePrice === '' ? 0 : formData.salePrice,
                 saleDiscountPercent: formData.saleDiscountPercent === '' ? 0 : formData.saleDiscountPercent,
-                saleDiscountAmount: formData.saleDiscountAmount === '' ? 0 : formData.saleDiscountAmount
+                // saleDiscountAmount removed
+                updatedAt: formData.updatedAt // This is now passed to the service
             };
 
             if (product) {
@@ -134,34 +136,57 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        const isTextfield = ['productName', 'modelNumber', 'arrivalDate', 'brandId'].includes(name);
 
         setFormData(prev => {
-            let newValue: string | number = value;
-            if (!isTextfield) {
-                // For numeric fields, keep empty string or parse to number
-                newValue = value === '' ? '' : parseFloat(value) || 0;
-            }
+            const newData = { ...prev, [name]: value };
 
-            const newData = { ...prev, [name]: newValue };
+            // Parse values for calculations (safely handle strings and numbers)
+            const parseNum = (val: string | number) => {
+                if (typeof val === 'number') return val;
+                if (!val) return 0;
+                return parseFloat(val) || 0;
+            };
 
-            // Only run calculations if we have numeric values
-            const mrpVal = typeof newData.mrp === 'number' ? newData.mrp : 0;
-            const discountPct = typeof newData.purchaseDiscountPercent === 'number' ? newData.purchaseDiscountPercent : 0;
-            const salePriceVal = typeof newData.salePrice === 'number' ? newData.salePrice : 0;
-            const saleDiscPct = typeof newData.saleDiscountPercent === 'number' ? newData.saleDiscountPercent : 0;
+            const mrpVal = parseNum(newData.mrp);
+            const inputValue = parseNum(value);
 
-            // Logic for calculations
-            if (name === 'mrp' && typeof newValue === 'number') {
-                newData.purchaseDiscountedPrice = newValue * (1 - discountPct / 100);
-            } else if (name === 'purchaseDiscountPercent' && typeof newValue === 'number') {
-                newData.purchaseDiscountedPrice = mrpVal * (1 - newValue / 100);
-            } else if (name === 'purchaseDiscountedPrice' && typeof newValue === 'number') {
+            // Only run calculations if we have valid numbers to work with
+            // We use inputValue instead of the raw string for math
+
+            if (name === 'mrp') {
+                const discountPct = parseNum(newData.purchaseDiscountPercent);
+                const saleDiscountPct = parseNum(newData.saleDiscountPercent);
+
+                // Recalculate based on new MRP. 
+                // We typically want to maintain the Discount % when MRP changes.
+                // So New Price = New MRP * (1 - Discount/100)
+
+                // Always recalculate if we have an MRP input
+                newData.purchaseDiscountedPrice = Number((inputValue * (1 - discountPct / 100)).toFixed(2));
+                newData.salePrice = Number((inputValue * (1 - saleDiscountPct / 100)).toFixed(2));
+
+            } else if (name === 'purchaseDiscountPercent') {
+                newData.purchaseDiscountedPrice = Number((mrpVal * (1 - inputValue / 100)).toFixed(2));
+
+            } else if (name === 'purchaseDiscountedPrice') {
                 if (mrpVal > 0) {
-                    newData.purchaseDiscountPercent = ((mrpVal - newValue) / mrpVal) * 100;
+                    newData.purchaseDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(2));
                 }
-            } else if (name === 'salePrice' || name === 'saleDiscountPercent') {
-                newData.saleDiscountAmount = salePriceVal * (saleDiscPct / 100);
+
+            } else if (name === 'saleDiscountPercent') {
+                // Ensure we have a valid MRP before calculating
+                if (mrpVal > 0) {
+                    const price = mrpVal * (1 - inputValue / 100);
+                    newData.salePrice = parseFloat(price.toFixed(2));
+                } else {
+                    // If no MRP, price is 0 (or should we keep it?)
+                    newData.salePrice = 0;
+                }
+
+            } else if (name === 'salePrice') {
+                if (mrpVal > 0) {
+                    newData.saleDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(2));
+                }
             }
 
             return newData;

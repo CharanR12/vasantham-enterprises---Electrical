@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExport }) => {
     },
     {
       path: '/invoices',
-      label: 'Invoices',
+      label: 'Quotations',
       icon: <FileText className="h-5 w-5" />,
     },
     {

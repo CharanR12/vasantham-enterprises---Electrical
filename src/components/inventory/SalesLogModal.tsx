@@ -1,8 +1,9 @@
 import React from 'react';
 import { Product, SaleEntry } from '../../types/inventory';
-import { Calendar, User, FileText, Package } from 'lucide-react';
+import { Calendar, User, FileText, Package, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { useDeleteSaleEntryMutation } from '../../hooks/queries/useInventoryQueries';
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,19 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
     return format(parseISO(dateString), 'dd/MM/yyyy');
   };
 
+  const deleteSaleEntryMutation = useDeleteSaleEntryMutation();
+
+  const handleDelete = async (entryId: string) => {
+    if (window.confirm('Are you sure you want to delete this sale entry? This will restore the stock quantity.')) {
+      try {
+        await deleteSaleEntryMutation.mutateAsync(entryId);
+      } catch (error) {
+        console.error('Failed to delete sale entry:', error);
+        alert('Failed to delete sale entry. Please try again.');
+      }
+    }
+  };
+
   const sortedEntries = [...salesEntries].sort(
     (a, b) => parseISO(b.saleDate).getTime() - parseISO(a.saleDate).getTime()
   );
@@ -29,7 +43,7 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
 
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden rounded-2xl">
+      <DialogContent className="w-full max-w-[95vw] lg:max-w-4xl max-h-[90vh] p-0 overflow-hidden rounded-2xl flex flex-col">
         <div className="flex justify-between items-center p-4 border-b">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">Sales Log</DialogTitle>
@@ -83,6 +97,9 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Quantity Sold
                       </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -99,6 +116,16 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {entry.quantitySold} units
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => handleDelete(entry.id)}
+                            className="text-red-600 hover:text-red-900 transition-colors p-1"
+                            title="Delete Entry"
+                            disabled={deleteSaleEntryMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -130,6 +157,18 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
                           <span className="text-sm">Bill: {entry.billNumber}</span>
                         </div>
                       )}
+
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                      <button
+                        onClick={() => handleDelete(entry.id)}
+                        className="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                        disabled={deleteSaleEntryMutation.isPending}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}

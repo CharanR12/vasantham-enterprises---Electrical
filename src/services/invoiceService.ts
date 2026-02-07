@@ -36,7 +36,8 @@ export const invoiceService = {
                     mrp: item.mrp,
                     salePrice: item.sale_price,
                     discount: item.discount || 0,
-                    purchaseRate: item.purchase_rate || 0,
+
+                    // purchaseRate: item.purchase_rate || 0, // Removed
                     purchaseDiscountPercent: item.purchase_discount_percent || 0,
                     purchaseDiscountedPrice: item.purchase_discounted_price || 0,
                     saleDiscountPercent: item.sale_discount_percent || 0,
@@ -66,21 +67,21 @@ export const invoiceService = {
             if (error) throw error;
 
             if (!data || data.length === 0) {
-                return 'INV-0001';
+                return 'QTN-0001';
             }
 
             const lastNumber = data[0].invoice_number;
             // Extract number part: INV-0001 -> 0001
-            const match = lastNumber.match(/INV-(\d+)/);
+            const match = lastNumber.match(/(?:INV|QTN)-(\d+)/);
             if (match && match[1]) {
                 const nextNum = parseInt(match[1]) + 1;
-                return `INV-${nextNum.toString().padStart(4, '0')}`;
+                return `QTN-${nextNum.toString().padStart(4, '0')}`;
             }
 
-            return 'INV-0001';
+            return 'QTN-0001';
         } catch (error) {
             console.error('Error fetching next invoice number:', error);
-            return `INV-${Date.now().toString().slice(-4)}`; // Fallback
+            return `QTN-${Date.now().toString().slice(-4)}`; // Fallback
         }
     },
 
@@ -114,7 +115,7 @@ export const invoiceService = {
                 sale_price: item.salePrice,
                 discount: item.discount, // Manual discount
                 // Snapshot fields
-                purchase_rate: item.purchaseRate,
+                // purchase_rate: item.purchaseRate, // Removed
                 purchase_discount_percent: item.purchaseDiscountPercent,
                 purchase_discounted_price: item.purchaseDiscountedPrice,
                 sale_discount_percent: item.saleDiscountPercent,
@@ -245,7 +246,7 @@ export const invoiceService = {
                     sale_price: item.salePrice,
                     discount: item.discount || 0,
                     // Snapshot fields (re-save them)
-                    purchase_rate: item.purchaseRate,
+                    // purchase_rate: item.purchaseRate, // Removed
                     purchase_discount_percent: item.purchaseDiscountPercent,
                     purchase_discounted_price: item.purchaseDiscountedPrice,
                     sale_discount_percent: item.saleDiscountPercent,

@@ -164,3 +164,20 @@ export const useAddSaleEntryMutation = () => {
         },
     });
 };
+
+export const useDeleteSaleEntryMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return saleEntryService.deleteSaleEntry(id, token);
+        },
+        onSuccess: () => {
+            // Deleting sale entry affects both sales list and product stock
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.sales() });
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.products() });
+        },
+    });
+};

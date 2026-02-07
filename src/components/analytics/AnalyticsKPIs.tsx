@@ -43,19 +43,19 @@ export const AnalyticsKPIs: React.FC<AnalyticsKPIsProps> = ({
     ];
 
     return (
-        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3">
             {kpis.map((kpi, i) => (
-                <div key={i} className={`premium-card p-5 group transition-all duration-300 ${kpi.isPrimary ? 'ring-4 ring-brand-500/5 border-brand-200' : ''}`}>
-                    <div className="flex items-center justify-between mb-4">
-                        <div className={`${kpi.color} ${kpi.bgColor} p-2.5 rounded-xl border border-current/10 transition-transform duration-300 group-hover:scale-110`}>
+                <div key={i} className={`premium-card p-3 group transition-all duration-300 ${kpi.isPrimary ? 'ring-4 ring-brand-500/5 border-brand-200' : ''}`}>
+                    <div className="flex items-center justify-between mb-3">
+                        <div className={`${kpi.color} ${kpi.bgColor} p-2 rounded-xl border border-current/10 transition-transform duration-300 group-hover:scale-110`}>
                             {kpi.icon}
                         </div>
                     </div>
                     <div>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight truncate">
+                        <div className="text-xl font-black text-slate-900 tracking-tight truncate">
                             {kpi.value}
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 transition-colors group-hover:text-slate-500">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 transition-colors group-hover:text-slate-500">
                             {kpi.label}
                         </p>
                     </div>
