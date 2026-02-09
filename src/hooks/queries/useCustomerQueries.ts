@@ -19,27 +19,40 @@ export const salesPersonKeys = {
 
 export const useCustomersQuery = () => {
     const { getToken } = useAuth();
-    const { filterId } = useUserRole();
+    const { currentRole } = useUserRole();
+    // filterId removed
 
     return useQuery({
-        queryKey: customerKeys.list(filterId),
+        queryKey: customerKeys.list(undefined),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return customerService.getCustomers(filterId, token);
+            return customerService.getCustomers(token);
         },
+        select: (data) => {
+            if (currentRole !== 'admin') {
+                return data.filter(c => c.salesPerson?.name?.toLowerCase() !== 'ramesh');
+            }
+            return data;
+        }
     });
 };
 
 export const useSalesPersonsQuery = () => {
     const { getToken } = useAuth();
-    const { filterId } = useUserRole();
+    const { currentRole } = useUserRole();
 
     return useQuery({
-        queryKey: salesPersonKeys.list(filterId),
+        queryKey: salesPersonKeys.list(undefined),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return salesPersonService.getSalesPersons(filterId, token);
+            return salesPersonService.getSalesPersons(token);
         },
+        select: (data) => {
+            if (currentRole !== 'admin') {
+                return data.filter(p => p.name?.toLowerCase() !== 'ramesh');
+            }
+            return data;
+        }
     });
 };
 

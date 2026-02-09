@@ -2,7 +2,7 @@ import { getClient, handleSupabaseError } from './apiUtils';
 import { Customer, FollowUp, FollowUpStatus, ReferralSource } from '../types';
 
 export const customerService = {
-    getCustomers: async (creatorId?: string, clerkToken?: string): Promise<Customer[]> => {
+    getCustomers: async (clerkToken?: string): Promise<Customer[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
@@ -13,9 +13,7 @@ export const customerService = {
           follow_ups(*)
         `);
 
-            if (creatorId) {
-                query = query.eq('created_by', creatorId);
-            }
+
 
             const { data: customersData, error: customersError } = await query
                 .order('created_at', { ascending: false });
@@ -85,7 +83,7 @@ export const customerService = {
                 handleSupabaseError(followUpsError);
             }
 
-            const customers = await customerService.getCustomers(undefined, clerkToken);
+            const customers = await customerService.getCustomers(clerkToken);
             return customers.find(c => c.id === customer.id)!;
         } catch (error) {
             console.error('Error creating customer:', error);
@@ -135,7 +133,7 @@ export const customerService = {
                 handleSupabaseError(followUpsError);
             }
 
-            const customers = await customerService.getCustomers(undefined, clerkToken);
+            const customers = await customerService.getCustomers(clerkToken);
             return customers.find(c => c.id === id)!;
         } catch (error) {
             console.error('Error updating customer:', error);

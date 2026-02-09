@@ -10,6 +10,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import InvoicesPage from './pages/InvoicesPage';
 import FilesPage from './pages/FilesPage';
 import SignInPage from './pages/SignInPage';
+import BulkEditPage from './pages/BulkEditPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
               <Layout>
                 <Routes>
                   <Route path="/" element={<TodayFollowUpsPage />} />
+                  <Route path="/inventory/bulk-edit" element={<BulkEditPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/invoices" element={<InvoicesPage />} />
                   <Route path="/files" element={<FilesPage />} />

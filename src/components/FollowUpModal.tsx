@@ -86,7 +86,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
           </DialogHeader>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="p-4 overflow-y-auto max-h-[60vh]">
           {sortedFollowUps.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-slate-100">

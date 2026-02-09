@@ -1,5 +1,5 @@
 import React from 'react';
-import { Customer, ReferralSource, SalesPerson } from '../../types';
+import { ReferralSource, SalesPerson } from '../../types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,6 +17,7 @@ interface CustomerBasicDetailsProps {
     setFormData: React.Dispatch<React.SetStateAction<any>>;
     handleSalesPersonChange: (id: string) => void;
     salesPersons: SalesPerson[];
+    referralSources: { id: string; name: string }[];
     disabled?: boolean;
 }
 
@@ -27,6 +28,7 @@ export const CustomerBasicDetails: React.FC<CustomerBasicDetailsProps> = ({
     setFormData,
     handleSalesPersonChange,
     salesPersons,
+    referralSources,
     disabled
 }) => {
     return (
@@ -96,12 +98,11 @@ export const CustomerBasicDetails: React.FC<CustomerBasicDetailsProps> = ({
                             <SelectValue placeholder="Source" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-slate-200 shadow-xl overflow-hidden">
-                            <SelectItem value="Self Marketing" className="py-3 focus:bg-brand-50">Self Marketing</SelectItem>
-                            <SelectItem value="Doors Data" className="py-3 focus:bg-brand-50">Doors Data</SelectItem>
-                            <SelectItem value="Walk-in Customer" className="py-3 focus:bg-brand-50">Walk-in Customer</SelectItem>
-                            <SelectItem value="Collection" className="py-3 focus:bg-brand-50">Collection</SelectItem>
-                            <SelectItem value="Build Expo 2024" className="py-3 focus:bg-brand-50">Build Expo 2024</SelectItem>
-                            <SelectItem value="Build Expo 2025" className="py-3 focus:bg-brand-50">Build Expo 2025</SelectItem>
+                            {referralSources.map((source) => (
+                                <SelectItem key={source.id} value={source.name} className="py-3 focus:bg-brand-50">
+                                    {source.name}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>

@@ -228,15 +228,14 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                                 Customer Name <span className="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
+                            <textarea
                                 value={customerName}
                                 onChange={(e) => {
                                     setCustomerName(e.target.value);
                                     if (errors.customer) setErrors({ ...errors, customer: '' });
                                 }}
-                                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all font-medium text-sm sm:text-base"
-                                placeholder="Enter customer name"
+                                className="w-full p-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all font-medium text-sm sm:text-base h-24 resize-none"
+                                placeholder="Enter customer name\nAddress\nPhone Number"
                             />
                         </div>
                         <div className="space-y-1.5">

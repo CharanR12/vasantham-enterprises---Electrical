@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Product } from '../types/inventory';
 import {
     useBrandsQuery,
+    useCategoriesQuery,
     useAddProductMutation,
     useUpdateProductMutation,
     useDeleteProductMutation,
@@ -11,6 +12,7 @@ import { format } from 'date-fns';
 
 export const useProductForm = (product: Product | undefined, onClose: () => void) => {
     const { data: brands = [] } = useBrandsQuery();
+    const { data: categories = [] } = useCategoriesQuery();
     const addProductMutation = useAddProductMutation();
     const updateProductMutation = useUpdateProductMutation();
     const deleteProductMutation = useDeleteProductMutation();
@@ -23,6 +25,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
 
     const initialState = {
         brandId: '',
+        categoryId: '',
         productName: '',
         modelNumber: '',
         quantityAvailable: '' as number | '',
@@ -38,21 +41,36 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
 
     const [formData, setFormData] = useState(product ? {
         brandId: product.brandId,
+        categoryId: product.categoryId || '',
         productName: product.productName,
         modelNumber: product.modelNumber,
         quantityAvailable: product.quantityAvailable || '' as number | '',
         arrivalDate: product.arrivalDate,
         mrp: product.mrp || '' as number | '',
-        // purchaseRate removed
         purchaseDiscountPercent: product.purchaseDiscountPercent || '' as number | '',
         purchaseDiscountedPrice: product.purchaseDiscountedPrice || '' as number | '',
         salePrice: product.salePrice || '' as number | '',
         saleDiscountPercent: product.saleDiscountPercent || '' as number | '',
-
         updatedAt: product.updatedAt
     } : { ...initialState, updatedAt: new Date().toISOString() });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const filteredCategories = useMemo(() => {
+        if (!formData.brandId) return [];
+        return categories.filter(c => c.brandId === formData.brandId);
+    }, [categories, formData.brandId]);
+
+    // Reset category when brand changes
+    useEffect(() => {
+        if (formData.brandId && product?.brandId !== formData.brandId) {
+            // If manual change (not initial load), check if current category belongs to new brand
+            const isCategoryValid = categories.find(c => c.id === formData.categoryId && c.brandId === formData.brandId);
+            if (!isCategoryValid) {
+                setFormData(prev => ({ ...prev, categoryId: '' }));
+            }
+        }
+    }, [formData.brandId, product]);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
@@ -81,14 +99,13 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
             // Convert empty strings to 0 for submission
             const submitData = {
                 ...formData,
+                categoryId: formData.categoryId || null, // API expects null for optional foreign keys if empty
                 quantityAvailable: formData.quantityAvailable === '' ? 0 : formData.quantityAvailable,
                 mrp: formData.mrp === '' ? 0 : formData.mrp,
-                // purchaseRate removed
                 purchaseDiscountPercent: formData.purchaseDiscountPercent === '' ? 0 : formData.purchaseDiscountPercent,
                 purchaseDiscountedPrice: formData.purchaseDiscountedPrice === '' ? 0 : formData.purchaseDiscountedPrice,
                 salePrice: formData.salePrice === '' ? 0 : formData.salePrice,
                 saleDiscountPercent: formData.saleDiscountPercent === '' ? 0 : formData.saleDiscountPercent,
-                // saleDiscountAmount removed
                 updatedAt: formData.updatedAt // This is now passed to the service
             };
 
@@ -96,9 +113,9 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
                 await updateProductMutation.mutateAsync({
                     ...product,
                     ...submitData
-                });
+                } as any); // Cast because submitData might have null categoryId which conflicts if type is strict string
             } else {
-                await addProductMutation.mutateAsync(submitData);
+                await addProductMutation.mutateAsync(submitData as any);
             }
             onClose();
         } catch (err: any) {
@@ -134,7 +151,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         }
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
 
         setFormData(prev => {
@@ -148,41 +165,28 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
             };
 
             const mrpVal = parseNum(newData.mrp);
+            // safe cast for calculation purposes
             const inputValue = parseNum(value);
 
             // Only run calculations if we have valid numbers to work with
-            // We use inputValue instead of the raw string for math
-
             if (name === 'mrp') {
                 const discountPct = parseNum(newData.purchaseDiscountPercent);
                 const saleDiscountPct = parseNum(newData.saleDiscountPercent);
-
-                // Recalculate based on new MRP. 
-                // We typically want to maintain the Discount % when MRP changes.
-                // So New Price = New MRP * (1 - Discount/100)
-
-                // Always recalculate if we have an MRP input
                 newData.purchaseDiscountedPrice = Number((inputValue * (1 - discountPct / 100)).toFixed(2));
                 newData.salePrice = Number((inputValue * (1 - saleDiscountPct / 100)).toFixed(2));
-
             } else if (name === 'purchaseDiscountPercent') {
                 newData.purchaseDiscountedPrice = Number((mrpVal * (1 - inputValue / 100)).toFixed(2));
-
             } else if (name === 'purchaseDiscountedPrice') {
                 if (mrpVal > 0) {
                     newData.purchaseDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(2));
                 }
-
             } else if (name === 'saleDiscountPercent') {
-                // Ensure we have a valid MRP before calculating
                 if (mrpVal > 0) {
                     const price = mrpVal * (1 - inputValue / 100);
                     newData.salePrice = parseFloat(price.toFixed(2));
                 } else {
-                    // If no MRP, price is 0 (or should we keep it?)
                     newData.salePrice = 0;
                 }
-
             } else if (name === 'salePrice') {
                 if (mrpVal > 0) {
                     newData.saleDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(2));
@@ -195,6 +199,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
 
     return {
         brands,
+        categories: filteredCategories,
         formData,
         setFormData,
         errors,

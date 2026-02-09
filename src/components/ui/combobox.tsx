@@ -25,6 +25,7 @@ interface ComboboxProps {
     emptyText?: string;
     className?: string;
     showIcon?: boolean;
+    disabled?: boolean;
 }
 
 export function Combobox({
@@ -36,6 +37,7 @@ export function Combobox({
     emptyText = "No option found.",
     className,
     showIcon = true,
+    disabled = false,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -48,6 +50,7 @@ export function Combobox({
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
+                    disabled={disabled}
                     className={cn(
                         "h-11 justify-between bg-white border-slate-200 rounded-xl hover:bg-slate-50 font-medium text-slate-700",
                         !value && "text-slate-400",

@@ -3,7 +3,10 @@ import {
     useBrandsQuery,
     useAddBrandMutation,
     useUpdateBrandMutation,
-    useDeleteBrandMutation
+    useDeleteBrandMutation,
+    useCategoriesQuery,
+    useAddCategoryMutation,
+    useDeleteCategoryMutation
 } from './queries/useInventoryQueries';
 import {
     useSalesPersonsQuery,
@@ -11,26 +14,49 @@ import {
     useUpdateSalesPersonMutation,
     useDeleteSalesPersonMutation
 } from './queries/useCustomerQueries';
+import {
+    useReferralSourcesQuery,
+    useAddReferralSourceMutation,
+    useUpdateReferralSourceMutation,
+    useDeleteReferralSourceMutation
+} from './queries/useReferralSourceQueries';
 
 export const useSettings = () => {
     const { data: brands = [], isLoading: brandsLoading, error: brandsError } = useBrandsQuery();
+    const { data: categories = [], isLoading: categoriesLoading } = useCategoriesQuery();
     const { data: salesPersons = [], isLoading: sPLoading, error: sPError } = useSalesPersonsQuery();
+    const { data: referralSources = [], isLoading: rsLoading, error: rsError } = useReferralSourcesQuery();
 
     const addBrandMutation = useAddBrandMutation();
     const updateBrandMutation = useUpdateBrandMutation();
     const deleteBrandMutation = useDeleteBrandMutation();
 
+    const addCategoryMutation = useAddCategoryMutation();
+    const deleteCategoryMutation = useDeleteCategoryMutation();
+
     const addSalesPersonMutation = useAddSalesPersonMutation();
     const updateSalesPersonMutation = useUpdateSalesPersonMutation();
     const deleteSalesPersonMutation = useDeleteSalesPersonMutation();
+
+    const addReferralSourceMutation = useAddReferralSourceMutation();
+    const updateReferralSourceMutation = useUpdateReferralSourceMutation();
+    const deleteReferralSourceMutation = useDeleteReferralSourceMutation();
 
     const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
     const [editBrandName, setEditBrandName] = useState('');
     const [newBrandName, setNewBrandName] = useState('');
 
+    // Category State
+    const [expandedBrandId, setExpandedBrandId] = useState<string | null>(null);
+    const [newCategoryName, setNewCategoryName] = useState('');
+
     const [editingSalesPersonId, setEditingSalesPersonId] = useState<string | null>(null);
     const [editSalesPersonName, setEditSalesPersonName] = useState('');
     const [newSalesPersonName, setNewSalesPersonName] = useState('');
+
+    const [editingReferralSourceId, setEditingReferralSourceId] = useState<string | null>(null);
+    const [editReferralSourceName, setEditReferralSourceName] = useState('');
+    const [newReferralSourceName, setNewReferralSourceName] = useState('');
 
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -79,6 +105,41 @@ export const useSettings = () => {
         }
     };
 
+    // Category Handlers
+    const handleToggleBrandExpand = (brandId: string) => {
+        if (expandedBrandId === brandId) {
+            setExpandedBrandId(null);
+        } else {
+            setExpandedBrandId(brandId);
+        }
+        setNewCategoryName('');
+        setActionError(null);
+    };
+
+    const handleAddCategory = async (brandId: string) => {
+        if (!newCategoryName.trim()) {
+            setActionError('Category name cannot be empty');
+            return;
+        }
+
+        try {
+            await addCategoryMutation.mutateAsync({ name: newCategoryName.trim(), brandId });
+            setNewCategoryName('');
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to add category');
+        }
+    };
+
+    const handleRemoveCategory = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this category?')) return;
+
+        try {
+            await deleteCategoryMutation.mutateAsync(id);
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to remove category');
+        }
+    };
+
     const handleEditSalesPerson = (id: string, name: string) => {
         setEditingSalesPersonId(id);
         setEditSalesPersonName(name);
@@ -124,26 +185,81 @@ export const useSettings = () => {
         }
     };
 
+    const handleEditReferralSource = (id: string, name: string) => {
+        setEditingReferralSourceId(id);
+        setEditReferralSourceName(name);
+        setActionError(null);
+    };
+
+    const handleSaveReferralSource = async (id: string) => {
+        if (!editReferralSourceName.trim()) {
+            setActionError('Referral source name cannot be empty');
+            return;
+        }
+
+        try {
+            await updateReferralSourceMutation.mutateAsync({ id, name: editReferralSourceName.trim() });
+            setEditingReferralSourceId(null);
+            setEditReferralSourceName('');
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to update referral source');
+        }
+    };
+
+    const handleAddReferralSource = async () => {
+        if (!newReferralSourceName.trim()) {
+            setActionError('Referral source name cannot be empty');
+            return;
+        }
+
+        try {
+            await addReferralSourceMutation.mutateAsync(newReferralSourceName.trim());
+            setNewReferralSourceName('');
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to add referral source');
+        }
+    };
+
+    const handleRemoveReferralSource = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this referral source? This may affect associated customers.')) return;
+
+        try {
+            await deleteReferralSourceMutation.mutateAsync(id);
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to remove referral source');
+        }
+    };
+
     const handleCancel = () => {
         setEditingBrandId(null);
         setEditBrandName('');
         setEditingSalesPersonId(null);
         setEditSalesPersonName('');
+        setEditingReferralSourceId(null);
+        setEditReferralSourceName('');
         setActionError(null);
+        setNewCategoryName('');
     };
 
     const actionLoading = addBrandMutation.isPending ? 'add-brand' :
         updateBrandMutation.isPending ? editingBrandId :
-            deleteBrandMutation.isPending ? deleteBrandMutation.variables : // Simplified
-                addSalesPersonMutation.isPending ? 'add-sales-person' :
-                    updateSalesPersonMutation.isPending ? editingSalesPersonId :
-                        deleteSalesPersonMutation.isPending ? deleteSalesPersonMutation.variables : null;
+            deleteBrandMutation.isPending ? deleteBrandMutation.variables :
+                addCategoryMutation.isPending ? 'add-category' :
+                    deleteCategoryMutation.isPending ? deleteCategoryMutation.variables :
+                        addSalesPersonMutation.isPending ? 'add-sales-person' :
+                            updateSalesPersonMutation.isPending ? editingSalesPersonId :
+                                deleteSalesPersonMutation.isPending ? deleteSalesPersonMutation.variables :
+                                    addReferralSourceMutation.isPending ? 'add-referral-source' :
+                                        updateReferralSourceMutation.isPending ? editingReferralSourceId :
+                                            deleteReferralSourceMutation.isPending ? deleteReferralSourceMutation.variables : null;
 
     return {
         brands,
+        categories,
         salesPersons,
-        loading: brandsLoading || sPLoading,
-        error: brandsError || sPError,
+        referralSources,
+        loading: brandsLoading || sPLoading || rsLoading || categoriesLoading,
+        error: brandsError || sPError || rsError,
         actionLoading: actionLoading as string | null,
         actionError,
         setActionError,
@@ -159,6 +275,14 @@ export const useSettings = () => {
         handleAddBrand,
         handleRemoveBrand,
 
+        // Category states/handlers
+        expandedBrandId,
+        newCategoryName,
+        setNewCategoryName,
+        handleToggleBrandExpand,
+        handleAddCategory,
+        handleRemoveCategory,
+
         // Sales person states/handlers
         editingSalesPersonId,
         editSalesPersonName,
@@ -170,6 +294,18 @@ export const useSettings = () => {
         handleAddSalesPerson,
         handleRemoveSalesPerson,
 
+        // Referral source states/handlers
+        editingReferralSourceId,
+        editReferralSourceName,
+        setEditReferralSourceName,
+        newReferralSourceName,
+        setNewReferralSourceName,
+        handleEditReferralSource,
+        handleSaveReferralSource,
+        handleAddReferralSource,
+        handleRemoveReferralSource,
+
         handleCancel
     };
 };
+

@@ -24,9 +24,9 @@ const TodayFollowUpsPage: React.FC = () => {
   const error = (customersError as any)?.message || null;
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSalesPerson, setSelectedSalesPerson] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<FollowUpStatus | ''>('');
-  const [selectedReferralSource, setSelectedReferralSource] = useState<ReferralSource | ''>('');
+  const [selectedSalesPerson, setSelectedSalesPerson] = useState<string[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string[]>([]);
+  const [selectedReferralSource, setSelectedReferralSource] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingFollowUps, setViewingFollowUps] = useState<Customer | null>(null);
@@ -45,14 +45,10 @@ const TodayFollowUpsPage: React.FC = () => {
     end: new Date().toISOString().split('T')[0]
   });
 
-  const [amountReceivedFilter, setAmountReceivedFilter] = useState<'all' | 'received' | 'not-received'>('all');
+  const [amountReceivedFilter, setAmountReceivedFilter] = useState<string[]>([]);
 
   const filtered = React.useMemo(() => {
     return customers.filter((customer) => {
-      // Role-based filtering
-      if (currentRole === 'user' && currentUser && customer.salesPerson.id !== currentUser.id) {
-        return false;
-      }
 
       // Search term filter
       const matchesSearch =
@@ -62,25 +58,40 @@ const TodayFollowUpsPage: React.FC = () => {
 
       // Sales person filter
       const matchesSalesPerson =
-        selectedSalesPerson === '' || customer.salesPerson.id === selectedSalesPerson;
+        selectedSalesPerson.length === 0 || selectedSalesPerson.includes(customer.salesPerson.id);
 
       // Status filter
       const matchesStatus =
-        selectedStatus === '' || customer.followUps.some(f => f.status === selectedStatus);
+        selectedStatus.length === 0 || customer.followUps.some(f => selectedStatus.includes(f.status));
 
       // Referral source filter
       const matchesReferralSource =
-        selectedReferralSource === '' || customer.referralSource === selectedReferralSource;
+        selectedReferralSource.length === 0 || selectedReferralSource.includes(customer.referralSource);
 
       // Amount received filter
       let matchesAmountReceived = true;
-      if (amountReceivedFilter !== 'all') {
+      if (amountReceivedFilter.length > 0) {
+        // If "received", we want to see completed sales where amountReceived is true
+        // If "not-received", we want sales where amountReceived is false/undefined
+        // If both selected, we want either.
         const completedSales = customer.followUps.filter(f => f.status === 'Sales completed');
         if (completedSales.length > 0) {
-          if (amountReceivedFilter === 'received') {
-            matchesAmountReceived = completedSales.some(f => f.amountReceived === true);
-          } else if (amountReceivedFilter === 'not-received') {
-            matchesAmountReceived = completedSales.some(f => f.amountReceived === false || f.amountReceived === undefined);
+          let hasReceived = false;
+          let hasNotReceived = false;
+
+          if (amountReceivedFilter.includes('received')) {
+            hasReceived = completedSales.some(f => f.amountReceived === true);
+          }
+          if (amountReceivedFilter.includes('not-received')) {
+            hasNotReceived = completedSales.some(f => f.amountReceived === false || f.amountReceived === undefined);
+          }
+
+          if (amountReceivedFilter.includes('received') && amountReceivedFilter.includes('not-received')) {
+            matchesAmountReceived = hasReceived || hasNotReceived;
+          } else if (amountReceivedFilter.includes('received')) {
+            matchesAmountReceived = hasReceived;
+          } else if (amountReceivedFilter.includes('not-received')) {
+            matchesAmountReceived = hasNotReceived;
           }
         } else {
           matchesAmountReceived = false;
@@ -149,7 +160,7 @@ const TodayFollowUpsPage: React.FC = () => {
           setFollowUpStatus={setSelectedStatus}
           referralSource={selectedReferralSource}
           setReferralSource={setSelectedReferralSource}
-          salesPersons={currentRole === 'admin' ? salesPersons : (currentUser ? [currentUser] : [])}
+          salesPersons={salesPersons}
           followUpFilter={followUpFilter}
           setFollowUpFilter={setFollowUpFilter}
           followUpDateRange={followUpDateRange}
@@ -160,6 +171,19 @@ const TodayFollowUpsPage: React.FC = () => {
           setCreationDateRange={setCreationDateRange}
           amountReceivedFilter={amountReceivedFilter}
           setAmountReceivedFilter={setAmountReceivedFilter}
+          onClear={() => {
+            setSearchTerm('');
+            setSelectedSalesPerson([]);
+            setSelectedStatus([]);
+            setSelectedReferralSource([]);
+            setFollowUpFilter('all');
+            setCreationFilter('all');
+            setAmountReceivedFilter([]);
+            // Optimally reset date ranges to today too
+            const today = new Date().toISOString().split('T')[0];
+            setFollowUpDateRange({ start: today, end: today });
+            setCreationDateRange({ start: today, end: today });
+          }}
         />
       </div>
 
@@ -229,10 +253,10 @@ const TodayFollowUpsPage: React.FC = () => {
               <button
                 onClick={() => {
                   setSearchTerm('');
-                  setSelectedStatus('');
+                  setSelectedStatus([]);
                   setFollowUpFilter('all');
                   setCreationFilter('all');
-                  setSelectedSalesPerson('');
+                  setSelectedSalesPerson([]);
                 }}
                 className="mt-4 text-brand-600 font-bold hover:underline underline-offset-4"
               >

@@ -72,7 +72,7 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
           </div>
         </div>
 
-        <div className="p-4 overflow-y-auto max-h-[calc(90vh-16rem)]">
+        <div className="p-4 overflow-y-auto max-h-[60vh]">
           {sortedEntries.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />

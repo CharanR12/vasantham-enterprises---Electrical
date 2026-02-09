@@ -1,12 +1,14 @@
 import React from 'react';
-import { Plus, Package, Edit2, Save, X, Trash2 } from 'lucide-react';
+import { Plus, Package, Edit2, Save, X, Trash2, ChevronDown, ChevronUp, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import LoadingSpinner from '../LoadingSpinner';
+import { Category } from '@/types/inventory';
 
 interface BrandManagementProps {
     brands: { id: string; name: string }[];
+    categories: Category[];
     loading: boolean;
     actionLoading: string | null;
     newBrandName: string;
@@ -18,11 +20,21 @@ interface BrandManagementProps {
     handleEditBrand: (id: string, name: string) => void;
     handleSaveBrand: (id: string) => void;
     handleRemoveBrand: (id: string) => void;
+
+    // Category props
+    expandedBrandId: string | null;
+    newCategoryName: string;
+    setNewCategoryName: (name: string) => void;
+    handleToggleBrandExpand: (brandId: string) => void;
+    handleAddCategory: (brandId: string) => void;
+    handleRemoveCategory: (id: string) => void;
+
     handleCancel: () => void;
 }
 
 export const BrandManagement: React.FC<BrandManagementProps> = ({
     brands,
+    categories,
     loading,
     actionLoading,
     newBrandName,
@@ -34,13 +46,21 @@ export const BrandManagement: React.FC<BrandManagementProps> = ({
     handleEditBrand,
     handleSaveBrand,
     handleRemoveBrand,
+
+    expandedBrandId,
+    newCategoryName,
+    setNewCategoryName,
+    handleToggleBrandExpand,
+    handleAddCategory,
+    handleRemoveCategory,
+
     handleCancel
 }) => {
     return (
         <div className="animate-fadeIn">
             <div className="mb-10">
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">System Brands</h2>
-                <p className="text-slate-500 text-sm mt-1 font-medium">Manage product manufacturers and categorization labels.</p>
+                <p className="text-slate-500 text-sm mt-1 font-medium">Manage product manufacturers and their categories.</p>
             </div>
 
             {/* Add New Brand */}
@@ -87,73 +107,139 @@ export const BrandManagement: React.FC<BrandManagementProps> = ({
                     <p className="text-slate-500 font-medium">No brand entries found in the system.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {brands.map((brand) => (
-                        <div key={brand.id} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:border-brand-200 transition-all duration-300 group">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 mr-4">
-                                    {editingBrandId === brand.id ? (
-                                        <Input
-                                            type="text"
-                                            value={editBrandName}
-                                            onChange={(e) => setEditBrandName(e.target.value)}
-                                            className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 w-full"
-                                            disabled={actionLoading === brand.id}
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <div className="flex items-center">
-                                            <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mr-4 border border-slate-100 transition-colors group-hover:bg-brand-50 group-hover:border-brand-100">
-                                                <span className="text-brand-600 font-black text-xs uppercase">{brand.name.substring(0, 2)}</span>
-                                            </div>
-                                            <div className="text-sm font-bold text-slate-800 tracking-tight">{brand.name}</div>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    {editingBrandId === brand.id ? (
-                                        <>
-                                            <button
-                                                onClick={() => handleSaveBrand(brand.id)}
-                                                className="text-emerald-600 hover:bg-emerald-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Save changes"
-                                                disabled={actionLoading === brand.id || !editBrandName.trim()}
-                                            >
-                                                {actionLoading === brand.id ? <LoadingSpinner size="sm" /> : <Save className="h-4 w-4" />}
-                                            </button>
-                                            <button
-                                                onClick={handleCancel}
-                                                className="text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Discard"
+                <div className="grid grid-cols-1 gap-4">
+                    {brands.map((brand) => {
+                        const brandCategories = categories.filter(c => c.brandId === brand.id);
+                        const isExpanded = expandedBrandId === brand.id;
+
+                        return (
+                            <div key={brand.id} className={`bg-white rounded-2xl border transition-all duration-300 ${isExpanded ? 'border-brand-200 shadow-md ring-1 ring-brand-100' : 'border-slate-100 shadow-sm hover:border-brand-200'}`}>
+                                <div className="p-4 flex items-center justify-between">
+                                    <div className="flex-1 mr-4 flex items-center">
+                                        <button
+                                            onClick={() => handleToggleBrandExpand(brand.id)}
+                                            className="mr-3 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors"
+                                        >
+                                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                        </button>
+
+                                        {editingBrandId === brand.id ? (
+                                            <Input
+                                                type="text"
+                                                value={editBrandName}
+                                                onChange={(e) => setEditBrandName(e.target.value)}
+                                                className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 w-full max-w-md"
                                                 disabled={actionLoading === brand.id}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button
-                                                onClick={() => handleEditBrand(brand.id, brand.name)}
-                                                className="text-slate-400 hover:text-brand-600 hover:bg-brand-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Edit brand"
-                                                disabled={actionLoading !== null}
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleRemoveBrand(brand.id)}
-                                                className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Delete"
-                                                disabled={actionLoading !== null}
-                                            >
-                                                {actionLoading === brand.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-4 w-4" />}
-                                            </button>
-                                        </>
-                                    )}
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <div onClick={() => handleToggleBrandExpand(brand.id)} className="flex items-center cursor-pointer flex-1">
+                                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mr-4 border border-slate-100 transition-colors group-hover:bg-brand-50 group-hover:border-brand-100">
+                                                    <span className="text-brand-600 font-black text-xs uppercase">{brand.name.substring(0, 2)}</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <div className="text-sm font-bold text-slate-800 tracking-tight">{brand.name}</div>
+                                                    <div className="text-xs text-slate-500 font-medium">{brandCategories.length} categories</div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex space-x-1">
+                                        {editingBrandId === brand.id ? (
+                                            <>
+                                                <button
+                                                    onClick={() => handleSaveBrand(brand.id)}
+                                                    className="text-emerald-600 hover:bg-emerald-50 p-2.5 rounded-xl transition-all duration-200"
+                                                    title="Save changes"
+                                                    disabled={actionLoading === brand.id || !editBrandName.trim()}
+                                                >
+                                                    {actionLoading === brand.id ? <LoadingSpinner size="sm" /> : <Save className="h-4 w-4" />}
+                                                </button>
+                                                <button
+                                                    onClick={handleCancel}
+                                                    className="text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
+                                                    title="Discard"
+                                                    disabled={actionLoading === brand.id}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEditBrand(brand.id, brand.name)}
+                                                    className="text-slate-400 hover:text-brand-600 hover:bg-brand-50 p-2.5 rounded-xl transition-all duration-200"
+                                                    title="Edit brand"
+                                                    disabled={actionLoading !== null}
+                                                >
+                                                    <Edit2 className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRemoveBrand(brand.id)}
+                                                    className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
+                                                    title="Delete"
+                                                    disabled={actionLoading !== null}
+                                                >
+                                                    {actionLoading === brand.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-4 w-4" />}
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
+
+                                {/* Expanded Categories Section */}
+                                {isExpanded && (
+                                    <div className="px-4 pb-4 pl-[4.5rem]">
+                                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100/50">
+                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center">
+                                                <Tag className="h-3 w-3 mr-1.5" />
+                                                Categories
+                                            </div>
+
+                                            <div className="flex items-center gap-2 mb-4">
+                                                <Input
+                                                    placeholder="Add new category..."
+                                                    value={newCategoryName}
+                                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                                    className="h-9 text-sm bg-white border-slate-200 rounded-lg focus-visible:ring-brand-500/20 focus-visible:border-brand-500"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleAddCategory(brand.id);
+                                                    }}
+                                                />
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleAddCategory(brand.id)}
+                                                    disabled={!newCategoryName.trim() || actionLoading === 'add-category'}
+                                                    className="h-9 px-4 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800"
+                                                >
+                                                    {actionLoading === 'add-category' ? <LoadingSpinner size="sm" /> : <Plus className="h-4 w-4" />}
+                                                </Button>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                {brandCategories.length === 0 ? (
+                                                    <span className="text-xs text-slate-400 italic">No categories added yet.</span>
+                                                ) : (
+                                                    brandCategories.map(cat => (
+                                                        <div key={cat.id} className="group flex items-center bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 hover:border-brand-300 hover:shadow-sm transition-all">
+                                                            <span className="text-sm font-medium text-slate-700 mr-2">{cat.name}</span>
+                                                            <button
+                                                                onClick={() => handleRemoveCategory(cat.id)}
+                                                                disabled={actionLoading !== null}
+                                                                className="text-slate-300 hover:text-rose-500 p-0.5 rounded-md hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100"
+                                                            >
+                                                                <X className="h-3 w-3" />
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 import ErrorMessage from './ErrorMessage';
 import { Button } from '@/components/ui/button';
+import { useReferralSourcesQuery } from '../hooks/queries/useReferralSourceQueries'; // Import hook
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
@@ -23,6 +24,7 @@ type CustomerFormProps = {
 };
 
 const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, salesPersons }) => {
+  const { data: referralSources = [] } = useReferralSourcesQuery(); // Fetch referral sources
   const {
     formData,
     setFormData,
@@ -85,6 +87,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, salesPer
                 setFormData={setFormData}
                 handleSalesPersonChange={handleSalesPersonChange}
                 salesPersons={salesPersons}
+                referralSources={referralSources}
                 disabled={formLoading || deleteLoading}
               />
 

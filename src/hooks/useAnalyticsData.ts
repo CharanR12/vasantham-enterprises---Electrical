@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useCustomersQuery, useSalesPersonsQuery } from './queries/useCustomerQueries';
 import { useProductsQuery, useSalesEntriesQuery } from './queries/useInventoryQueries';
+import { useUserRole } from './useUserRole';
 import {
     parseISO,
     format,
@@ -54,54 +55,85 @@ export const useAnalyticsData = (
     dailySalesStartDate: string,
     dailySalesEndDate: string,
     selectedSalesPerson: string,
-    salesTypeFilter: 'all' | 'follow-up' | 'inventory'
+    salesTypeFilter: 'all' | 'follow-up' | 'inventory',
+    // New optional filters for inventory
+    inventorySearchTerm: string = '',
+    inventorySelectedBrand: string = ''
 ) => {
     const { data: customers = [], isLoading: salesLoading, error: salesError } = useCustomersQuery();
     const { data: salesPersons = [], isLoading: sPLoading } = useSalesPersonsQuery();
     const { data: products = [], isLoading: inventoryLoading, error: inventoryError } = useProductsQuery();
     const { data: salesEntries = [], isLoading: seLoading, error: seError } = useSalesEntriesQuery();
+    const { currentRole } = useUserRole();
 
     const loading = salesLoading || sPLoading || inventoryLoading || seLoading;
     const error = salesError || inventoryError || seError;
 
+    // Filter customers based on User Role (Hide "Ramesh" for non-admins)
+    const visibleCustomers = useMemo(() => {
+        if (currentRole === 'admin') {
+            return customers;
+        }
+        return customers.filter(c => c.salesPerson?.name?.toLowerCase() !== 'ramesh');
+    }, [customers, currentRole]);
+
+    // Filter sales persons list based on User Role (Hide "Ramesh" for non-admins)
+    const visibleSalesPersons = useMemo(() => {
+        if (currentRole === 'admin') {
+            return salesPersons;
+        }
+        return salesPersons.filter(sp => sp.name?.toLowerCase() !== 'ramesh');
+    }, [salesPersons, currentRole]);
+
+    // Filter Products based on search/brand (used for inventory metrics)
+    const filteredProducts = useMemo(() => {
+        return products.filter(product => {
+            const matchesSearch = !inventorySearchTerm ||
+                product.productName.toLowerCase().includes(inventorySearchTerm.toLowerCase()) ||
+                product.modelNumber.toLowerCase().includes(inventorySearchTerm.toLowerCase());
+            const matchesBrand = !inventorySelectedBrand || product.brandId === inventorySelectedBrand;
+            return matchesSearch && matchesBrand;
+        });
+    }, [products, inventorySearchTerm, inventorySelectedBrand]);
+
     // Enhanced Sales Analytics with Revenue
     const salesMetrics = useMemo(() => {
-        const completedSales = customers.filter(customer =>
+        const completedSales = visibleCustomers.filter(customer =>
             customer.followUps.some(followUp => followUp.status === 'Sales completed')
         );
 
-        const rejectedSales = customers.filter(customer =>
+        const rejectedSales = visibleCustomers.filter(customer =>
             customer.followUps.some(followUp => followUp.status === 'Sales rejected')
         );
 
-        const pendingSales = customers.filter(customer =>
+        const pendingSales = visibleCustomers.filter(customer =>
             customer.followUps.every(followUp =>
                 followUp.status !== 'Sales completed' && followUp.status !== 'Sales rejected'
             )
         );
 
-        const todayFollowUps = customers.filter(customer =>
+        const todayFollowUps = visibleCustomers.filter(customer =>
             customer.followUps.some(followUp => followUp.date === format(new Date(), 'yyyy-MM-dd'))
         );
 
-        const totalRevenue = customers.reduce((total, customer) => {
+        const totalRevenue = visibleCustomers.reduce((total, customer) => {
             return total + customer.followUps
                 .filter(followUp => followUp.status === 'Sales completed' && followUp.salesAmount)
                 .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
         }, 0);
 
-        const completedSalesWithAmount = customers.reduce((total, customer) => {
+        const completedSalesWithAmount = visibleCustomers.reduce((total, customer) => {
             return total + customer.followUps.filter(followUp =>
                 followUp.status === 'Sales completed' && followUp.salesAmount && followUp.salesAmount > 0
             ).length;
         }, 0);
 
         const averageDealSize = completedSalesWithAmount > 0 ? totalRevenue / completedSalesWithAmount : 0;
-        const conversionRate = customers.length > 0 ? (completedSales.length / customers.length * 100) : 0;
-        const rejectionRate = customers.length > 0 ? (rejectedSales.length / customers.length * 100) : 0;
+        const conversionRate = visibleCustomers.length > 0 ? (completedSales.length / visibleCustomers.length * 100) : 0;
+        const rejectionRate = visibleCustomers.length > 0 ? (rejectedSales.length / visibleCustomers.length * 100) : 0;
 
         return {
-            totalCustomers: customers.length,
+            totalCustomers: visibleCustomers.length,
             completedSales: completedSales.length,
             rejectedSales: rejectedSales.length,
             pendingSales: pendingSales.length,
@@ -111,12 +143,12 @@ export const useAnalyticsData = (
             conversionRate: conversionRate.toFixed(1),
             rejectionRate: rejectionRate.toFixed(1)
         };
-    }, [customers]);
+    }, [visibleCustomers]);
 
     // Enhanced Sales Person Performance with Revenue
     const salesPersonPerformance = useMemo(() => {
-        return salesPersons.map(person => {
-            const personCustomers = customers.filter(c => c.salesPerson.id === person.id);
+        return visibleSalesPersons.map(person => {
+            const personCustomers = visibleCustomers.filter(c => c.salesPerson.id === person.id);
             const completedSales = personCustomers.filter(customer =>
                 customer.followUps.some(followUp => followUp.status === 'Sales completed')
             );
@@ -144,16 +176,23 @@ export const useAnalyticsData = (
                 efficiency: personCustomers.length > 0 ? (completedSales.length / (completedSales.length + rejectedSales.length) * 100) || 0 : 0
             };
         }).sort((a, b) => b.revenue - a.revenue);
-    }, [salesPersons, customers]);
+    }, [visibleSalesPersons, visibleCustomers]);
 
     // Enhanced Inventory Analytics
     const inventoryMetrics = useMemo(() => {
-        const totalProducts = products.length;
-        const totalStock = products.reduce((sum, product) => sum + product.quantityAvailable, 0);
-        const totalSold = salesEntries.reduce((sum, entry) => sum + entry.quantitySold, 0);
-        const lowStockProducts = products.filter(product => product.quantityAvailable <= 5 && product.quantityAvailable > 0).length;
-        const outOfStockProducts = products.filter(product => product.quantityAvailable === 0).length;
-        const inStockProducts = products.filter(product => product.quantityAvailable > 5).length;
+        // Use filteredProducts here to reflect search/brand
+        const totalProducts = filteredProducts.length;
+        const totalStock = filteredProducts.reduce((sum, product) => sum + product.quantityAvailable, 0);
+
+        // Filter sales entries to match filtered products
+        const filteredSalesEntries = salesEntries.filter(entry =>
+            filteredProducts.some(p => p.id === entry.productId)
+        );
+
+        const totalSold = filteredSalesEntries.reduce((sum, entry) => sum + entry.quantitySold, 0);
+        const lowStockProducts = filteredProducts.filter(product => product.quantityAvailable <= 5 && product.quantityAvailable > 0).length;
+        const outOfStockProducts = filteredProducts.filter(product => product.quantityAvailable === 0).length;
+        const inStockProducts = filteredProducts.filter(product => product.quantityAvailable > 5).length;
 
         const averageStock = totalStock + totalSold;
         const stockTurnover = averageStock > 0 ? (totalSold / averageStock * 100) : 0;
@@ -168,7 +207,7 @@ export const useAnalyticsData = (
             stockTurnover: stockTurnover.toFixed(1),
             stockValue: totalStock
         };
-    }, [products, salesEntries]);
+    }, [products, filteredProducts, salesEntries]);
 
     // Enhanced Time-based Analytics with Revenue Trends
     const timeBasedAnalytics = useMemo(() => {
@@ -179,43 +218,69 @@ export const useAnalyticsData = (
 
         const filteredSales = salesEntries.filter(entry => {
             const saleDate = parseISO(entry.saleDate);
-            return saleDate >= startDate && saleDate <= endDate;
+            // Matches date range AND belongs to a product in the filtered list (search/brand)
+            const matchesProduct = filteredProducts.some(p => p.id === entry.productId);
+            return saleDate >= startDate && saleDate <= endDate && matchesProduct;
         });
 
-        const filteredCustomers = customers.filter(customer => {
+        const filteredCustomers = visibleCustomers.filter(customer => {
             const createdDate = parseISO(customer.createdAt);
+            // Customer filtering by Search/Brand is NOT applicable, so we leave as is or decide?
+            // User requested Inventory Page filters. It's likely they only apply to Inventory Tab.
+            // If we are in "Combined" or "Follow-up" mode, these inventory filters should probably be ignored for customers.
+            // But since this hook is generic, we just proceed.
             return createdDate >= startDate && createdDate <= endDate;
         });
-
-        const periodRevenue = customers.reduce((total, customer) => {
-            return total + customer.followUps
-                .filter(followUp => {
-                    const followUpDate = parseISO(followUp.date);
-                    return followUp.status === 'Sales completed' &&
-                        followUp.salesAmount &&
-                        followUpDate >= startDate &&
-                        followUpDate <= endDate;
-                })
-                .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
-        }, 0);
 
         const days = eachDayOfInterval({ start: startDate, end: endDate });
         const dailyDataRaw = days.map(day => {
             const dayStr = format(day, 'yyyy-MM-dd');
-            const daySales = filteredSales.filter(entry => entry.saleDate === dayStr);
-            const dayCustomers = filteredCustomers.filter(customer => customer.createdAt === dayStr);
-            const dayRevenue = customers.reduce((total, customer) => {
+
+            // Inventory Sales Logic
+            const dayInventorySales = filteredSales.filter(entry => entry.saleDate === dayStr);
+            const inventoryCount = dayInventorySales.reduce((sum, entry) => sum + entry.quantitySold, 0);
+
+            // Follow-up Sales (Revenue) Logic
+            const followUpRevenue = visibleCustomers.reduce((total, customer) => {
+                // If sales person filter is applied, only count their customers
+                if (selectedSalesPerson && customer.salesPerson.id !== selectedSalesPerson) return total;
+
                 return total + customer.followUps
                     .filter(followUp => followUp.date === dayStr && followUp.status === 'Sales completed' && followUp.salesAmount)
                     .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
             }, 0);
 
+            // Follow-up Sales Count (Count of completed sales)
+            const followUpCount = visibleCustomers.reduce((total, customer) => {
+                if (selectedSalesPerson && customer.salesPerson.id !== selectedSalesPerson) return total;
+
+                return total + customer.followUps
+                    .filter(followUp => followUp.date === dayStr && followUp.status === 'Sales completed')
+                    .length;
+            }, 0);
+
+            // Determine what "sales" and "revenue" mean based on filter
+            let salesValue = 0;
+            let revenueValue = 0;
+
+            if (salesTypeFilter === 'inventory') {
+                salesValue = inventoryCount; // "Sales" in inventory context usually means Quantity Sold
+                revenueValue = 0; // We don't track revenue for inventory yet, or it's implicitly volume
+            } else if (salesTypeFilter === 'follow-up') {
+                salesValue = followUpCount;
+                revenueValue = followUpRevenue;
+            } else {
+                // Combined (if ever used)
+                salesValue = inventoryCount + followUpCount;
+                revenueValue = followUpRevenue;
+            }
+
             return {
                 date: format(day, 'MMM dd'),
                 fullDate: dayStr,
-                sales: daySales.length,
-                customers: dayCustomers.length,
-                revenue: dayRevenue
+                sales: salesValue,
+                revenue: revenueValue,
+                customers: filteredCustomers.filter(c => c.createdAt === dayStr).length
             };
         });
 
@@ -226,15 +291,18 @@ export const useAnalyticsData = (
         const previousAvg = previousData.reduce((sum, day) => sum + day.sales, 0) / Math.max(1, previousData.length);
         const growthTrend = previousAvg > 0 ? ((recentAvg - previousAvg) / previousAvg * 100) : 0;
 
+        const totalSalesVolume = dailyDataRaw.reduce((sum, day) => sum + day.sales, 0);
+        const totalRevenueValue = dailyDataRaw.reduce((sum, day) => sum + day.revenue, 0);
+
         return {
-            totalSales: filteredSales.length,
+            totalSales: totalSalesVolume,
             totalCustomers: filteredCustomers.length,
-            totalRevenue: periodRevenue,
+            totalRevenue: totalRevenueValue,
             dailyData: recentData,
             growthTrend: growthTrend.toFixed(1),
             averageDailySales: recentAvg.toFixed(1)
         };
-    }, [selectedPeriod, salesEntries, customers]);
+    }, [selectedPeriod, salesEntries, visibleCustomers, selectedSalesPerson, salesTypeFilter, filteredProducts]);
 
     // Enhanced Top Products with More Metrics
     const topProducts = useMemo(() => {
@@ -299,7 +367,7 @@ export const useAnalyticsData = (
     const dailySalesData = useMemo(() => {
         const salesMap = new Map<string, DaySalesData>();
 
-        customers.forEach(customer => {
+        visibleCustomers.forEach(customer => {
             if (selectedSalesPerson && customer.salesPerson.id !== selectedSalesPerson) return;
 
             customer.followUps.forEach(followUp => {
@@ -346,6 +414,9 @@ export const useAnalyticsData = (
         });
 
         salesEntries.forEach(saleEntry => {
+            // Inventory sales are not linked to sales persons, so we exclude them when filtering by a specific person
+            if (selectedSalesPerson) return;
+
             const saleDate = parseISO(saleEntry.saleDate);
             const startDateObj = parseISO(dailySalesStartDate);
             const endDateObj = parseISO(dailySalesEndDate);
@@ -398,7 +469,7 @@ export const useAnalyticsData = (
         }
 
         return result;
-    }, [customers, salesEntries, products, dailySalesStartDate, dailySalesEndDate, selectedSalesPerson, salesTypeFilter]);
+    }, [visibleCustomers, salesEntries, products, dailySalesStartDate, dailySalesEndDate, selectedSalesPerson, salesTypeFilter]);
 
     // Daily Sales Summary Stats
     const dailySalesSummaryStats = useMemo(() => {
@@ -437,6 +508,6 @@ export const useAnalyticsData = (
         brandPerformance,
         dailySalesData,
         dailySalesSummaryStats,
-        salesPersons // To be used in filters
+        salesPersons: visibleSalesPersons // To be used in filters
     };
 };

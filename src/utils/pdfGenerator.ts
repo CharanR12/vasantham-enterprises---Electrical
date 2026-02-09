@@ -137,11 +137,16 @@ export const generateInvoicePDF = (invoice: Invoice) => {
     doc.text("To.", mLeft + 3, leftY);
 
     doc.setFontSize(10);
-    doc.text((invoice.customerName || "Customer").toUpperCase(), mLeft + 12, leftY);
+    // Multi-line Customer Name Support
+    const customerLines = (invoice.customerName || "Customer").split('\n');
+    customerLines.forEach((line, index) => {
+        doc.text(line.toUpperCase(), mLeft + 12, leftY + (index * 4));
+    });
 
     if (invoice.companyName) {
         doc.setFont("helvetica", "normal");
-        doc.text(invoice.companyName.toUpperCase(), mLeft + 12, leftY + 5);
+        // Position company name after the last line of customer name
+        doc.text(invoice.companyName.toUpperCase(), mLeft + 12, leftY + (customerLines.length * 4) + 2);
     }
 
     // Right Side: Quotation Details

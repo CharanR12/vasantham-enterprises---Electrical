@@ -3,7 +3,7 @@ export type SalesPerson = {
   name: string;
 };
 
-export type ReferralSource = 'Self Marketing' | 'Doors Data' | 'Walk-in Customer' | 'Collection' | 'Build Expo 2024' | 'Build Expo 2025';
+export type ReferralSource = string;
 
 export type FollowUpStatus = 'Not yet contacted' | 'Scheduled next follow-up' | 'Sales completed' | 'Sales rejected';
 

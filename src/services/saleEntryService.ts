@@ -2,16 +2,14 @@ import { getClient, handleSupabaseError, ApiError } from './apiUtils';
 import { SaleEntry } from '../types/inventory';
 
 export const saleEntryService = {
-    getSaleEntries: async (creatorId?: string, clerkToken?: string): Promise<SaleEntry[]> => {
+    getSaleEntries: async (clerkToken?: string): Promise<SaleEntry[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
                 .from('sale_entries')
                 .select('*');
 
-            if (creatorId) {
-                query = query.eq('created_by', creatorId);
-            }
+
 
             const { data, error } = await query
                 .order('sale_date', { ascending: false });

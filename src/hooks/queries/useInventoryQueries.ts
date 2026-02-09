@@ -3,54 +3,66 @@ import { useAuth } from '@clerk/clerk-react';
 import { brandService } from '../../services/brandService';
 import { productService } from '../../services/productService';
 import { saleEntryService } from '../../services/saleEntryService';
+import { categoryService } from '../../services/categoryService';
 import { useUserRole } from '../useUserRole';
 import { Product, SaleEntry } from '../../types/inventory';
 
 export const inventoryKeys = {
     all: ['inventory'] as const,
     brands: () => [...inventoryKeys.all, 'brands'] as const,
+    categories: () => [...inventoryKeys.all, 'categories'] as const,
     products: () => [...inventoryKeys.all, 'products'] as const,
     sales: () => [...inventoryKeys.all, 'sales'] as const,
     brandList: (filterId?: string) => [...inventoryKeys.brands(), { filterId }] as const,
+    categoryList: (brandId?: string) => [...inventoryKeys.categories(), { brandId }] as const,
     productList: (filterId?: string) => [...inventoryKeys.products(), { filterId }] as const,
     saleList: (filterId?: string) => [...inventoryKeys.sales(), { filterId }] as const,
 };
 
 export const useBrandsQuery = () => {
     const { getToken } = useAuth();
-    const { filterId } = useUserRole();
 
     return useQuery({
-        queryKey: inventoryKeys.brandList(filterId),
+        queryKey: inventoryKeys.brandList(undefined),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return brandService.getBrands(filterId, token);
+            return brandService.getBrands(token);
+        },
+    });
+};
+
+export const useCategoriesQuery = (brandId?: string) => {
+    const { getToken } = useAuth();
+
+    return useQuery({
+        queryKey: inventoryKeys.categoryList(brandId),
+        queryFn: async () => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return categoryService.getCategories(brandId, token);
         },
     });
 };
 
 export const useProductsQuery = () => {
     const { getToken } = useAuth();
-    const { filterId } = useUserRole();
 
     return useQuery({
-        queryKey: inventoryKeys.productList(filterId),
+        queryKey: inventoryKeys.productList(undefined),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return productService.getProducts(filterId, token);
+            return productService.getProducts(token);
         },
     });
 };
 
 export const useSalesEntriesQuery = () => {
     const { getToken } = useAuth();
-    const { filterId } = useUserRole();
 
     return useQuery({
-        queryKey: inventoryKeys.saleList(filterId),
+        queryKey: inventoryKeys.saleList(undefined),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return saleEntryService.getSaleEntries(filterId, token);
+            return saleEntryService.getSaleEntries(token);
         },
     });
 };
@@ -143,6 +155,53 @@ export const useDeleteBrandMutation = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: inventoryKeys.brands() });
+        },
+    });
+};
+
+export const useAddCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+    const { user } = useUserRole();
+
+    return useMutation({
+        mutationFn: async ({ name, brandId }: { name: string, brandId: string }) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return categoryService.createCategory(name, brandId, user?.id, token);
+        },
+        onSuccess: (_, variables) => {
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.categoryList(variables.brandId) });
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.categories() });
+        },
+    });
+};
+
+export const useUpdateCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+
+    return useMutation({
+        mutationFn: async ({ id, name }: { id: string, name: string }) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return categoryService.updateCategory(id, name, token);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.categories() });
+        },
+    });
+};
+
+export const useDeleteCategoryMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return categoryService.deleteCategory(id, token);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.categories() });
         },
     });
 };

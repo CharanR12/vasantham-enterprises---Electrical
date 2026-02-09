@@ -143,11 +143,11 @@ export const InventoryInsights: React.FC<InventoryInsightsProps> = ({
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SKUs</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Products</span>
                                         <span className="text-xs font-black text-slate-900">{brand.totalProducts}</span>
                                     </div>
                                     <div className="flex items-center justify-between p-2 bg-white rounded-xl border border-slate-100">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Held</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Stock</span>
                                         <span className="text-xs font-black text-emerald-600">{brand.totalStock}</span>
                                     </div>
                                 </div>

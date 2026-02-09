@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { Package, Users } from 'lucide-react';
+import { Package, Users, Share2 } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
 import { useSettings } from '../hooks/useSettings';
 import { BrandManagement } from '../components/settings/BrandManagement';
 import { SalesForceManagement } from '../components/settings/SalesForceManagement';
+import { ReferralSourceManagement } from '../components/settings/ReferralSourceManagement';
 
 const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'inventory' | 'sales'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'sales' | 'referral'>('inventory');
 
   const {
     brands,
     salesPersons,
+    referralSources,
     loading,
     error,
     actionLoading,
@@ -38,6 +40,26 @@ const SettingsPage: React.FC = () => {
     handleSaveSalesPerson,
     handleAddSalesPerson,
     handleRemoveSalesPerson,
+
+    // Referral source states/handlers
+    editingReferralSourceId,
+    editReferralSourceName,
+    setEditReferralSourceName,
+    newReferralSourceName,
+    setNewReferralSourceName,
+    handleEditReferralSource,
+    handleSaveReferralSource,
+    handleAddReferralSource,
+    handleRemoveReferralSource,
+
+    // Category states/handlers
+    categories,
+    expandedBrandId,
+    newCategoryName,
+    setNewCategoryName,
+    handleToggleBrandExpand,
+    handleAddCategory,
+    handleRemoveCategory,
 
     handleCancel
   } = useSettings();
@@ -74,6 +96,16 @@ const SettingsPage: React.FC = () => {
               <Users className={`h-4 w-4 ${activeTab === 'sales' ? 'text-brand-500' : ''}`} />
               <span className="uppercase tracking-widest">Sales Team</span>
             </button>
+            <button
+              onClick={() => setActiveTab('referral')}
+              className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'referral'
+                ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                }`}
+            >
+              <Share2 className={`h-4 w-4 ${activeTab === 'referral' ? 'text-brand-500' : ''}`} />
+              <span className="uppercase tracking-widest">Referral Sources</span>
+            </button>
           </nav>
         </div>
 
@@ -81,7 +113,7 @@ const SettingsPage: React.FC = () => {
         <div className="p-6 sm:p-10">
           {(error || actionError) && (
             <ErrorMessage
-              message={actionError || error || ''}
+              message={actionError || (error as Error)?.message || ''}
               onDismiss={() => setActionError(null)}
               className="mb-8 rounded-2xl border-red-100 shadow-sm"
             />
@@ -90,6 +122,7 @@ const SettingsPage: React.FC = () => {
           {activeTab === 'inventory' ? (
             <BrandManagement
               brands={brands}
+              categories={categories}
               loading={loading}
               actionLoading={actionLoading}
               newBrandName={newBrandName}
@@ -101,9 +134,17 @@ const SettingsPage: React.FC = () => {
               handleEditBrand={handleEditBrand}
               handleSaveBrand={handleSaveBrand}
               handleRemoveBrand={handleRemoveBrand}
+
+              expandedBrandId={expandedBrandId}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+              handleToggleBrandExpand={handleToggleBrandExpand}
+              handleAddCategory={handleAddCategory}
+              handleRemoveCategory={handleRemoveCategory}
+
               handleCancel={handleCancel}
             />
-          ) : (
+          ) : activeTab === 'sales' ? (
             <SalesForceManagement
               salesPersons={salesPersons}
               loading={loading}
@@ -117,6 +158,22 @@ const SettingsPage: React.FC = () => {
               handleEditSalesPerson={handleEditSalesPerson}
               handleSaveSalesPerson={handleSaveSalesPerson}
               handleRemoveSalesPerson={handleRemoveSalesPerson}
+              handleCancel={handleCancel}
+            />
+          ) : (
+            <ReferralSourceManagement
+              referralSources={referralSources}
+              loading={loading}
+              actionLoading={actionLoading}
+              newReferralSourceName={newReferralSourceName}
+              setNewReferralSourceName={setNewReferralSourceName}
+              editingReferralSourceId={editingReferralSourceId}
+              editReferralSourceName={editReferralSourceName}
+              setEditReferralSourceName={setEditReferralSourceName}
+              handleAddReferralSource={handleAddReferralSource}
+              handleEditReferralSource={handleEditReferralSource}
+              handleSaveReferralSource={handleSaveReferralSource}
+              handleRemoveReferralSource={handleRemoveReferralSource}
               handleCancel={handleCancel}
             />
           )}

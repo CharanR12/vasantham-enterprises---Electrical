@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useProductsQuery, useBrandsQuery, useSalesEntriesQuery } from '../hooks/queries/useInventoryQueries';
+import { useProductsQuery, useBrandsQuery, useSalesEntriesQuery, useCategoriesQuery } from '../hooks/queries/useInventoryQueries';
 import InventorySearchFilter from '../components/inventory/InventorySearchFilter';
 import InventoryKPICards from '../components/inventory/InventoryKPICards';
 import ProductCard from '../components/inventory/ProductCard';
@@ -18,12 +18,13 @@ const InventoryPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const { data: products = [], isLoading: productsLoading, error: productsError } = useProductsQuery();
   const { data: brands = [], isLoading: brandsLoading } = useBrandsQuery();
+  const { data: categories = [], isLoading: categoriesLoading } = useCategoriesQuery();
   const { data: salesEntries = [], isLoading: salesLoading, error: salesError } = useSalesEntriesQuery();
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  const loading = productsLoading || brandsLoading || salesLoading;
+  const loading = productsLoading || brandsLoading || salesLoading || categoriesLoading;
   const error = (productsError as any)?.message || (salesError as any)?.message || null;
 
   const getSalesForProduct = (productId: string): SaleEntry[] => {
@@ -31,8 +32,9 @@ const InventoryPage: React.FC = () => {
   };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedBrand, setSelectedBrand] = useState('');
-  const [stockFilter, setStockFilter] = useState<'all' | 'in-stock' | 'low-stock' | 'out-of-stock'>('all');
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [stockFilter, setStockFilter] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [viewingSalesLog, setViewingSalesLog] = useState<Product | null>(null);
@@ -92,28 +94,23 @@ const InventoryPage: React.FC = () => {
         product.brand.name.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Brand filter
-      const matchesBrand =
-        selectedBrand === '' || product.brandId === selectedBrand;
+      const matchesBrand = selectedBrands.length === 0 || selectedBrands.includes(product.brandId);
+
+      // Category filter
+      const matchesCategory = selectedCategories.length === 0 || (product.categoryId && selectedCategories.includes(product.categoryId));
 
       // Stock filter
       let matchesStock = true;
-      switch (stockFilter) {
-        case 'in-stock':
-          matchesStock = product.quantityAvailable > 5;
-          break;
-        case 'low-stock':
-          matchesStock = product.quantityAvailable > 0 && product.quantityAvailable <= 5;
-          break;
-        case 'out-of-stock':
-          matchesStock = product.quantityAvailable === 0;
-          break;
-        default:
-          matchesStock = true;
+      if (stockFilter.length > 0) {
+        matchesStock = false;
+        if (stockFilter.includes('in-stock') && product.quantityAvailable > 5) matchesStock = true;
+        if (stockFilter.includes('low-stock') && product.quantityAvailable > 0 && product.quantityAvailable <= 5) matchesStock = true;
+        if (stockFilter.includes('out-of-stock') && product.quantityAvailable === 0) matchesStock = true;
       }
 
-      return matchesSearch && matchesBrand && matchesStock;
+      return matchesSearch && matchesBrand && matchesCategory && matchesStock;
     });
-  }, [products, searchTerm, selectedBrand, stockFilter]);
+  }, [products, searchTerm, selectedBrands, selectedCategories, stockFilter]);
 
   return (
     <div className="space-y-8 pb-24">
@@ -136,11 +133,20 @@ const InventoryPage: React.FC = () => {
         <InventorySearchFilter
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
-          selectedBrand={selectedBrand}
-          setSelectedBrand={setSelectedBrand}
+          selectedBrands={selectedBrands}
+          setSelectedBrands={setSelectedBrands}
+          selectedCategories={selectedCategories}
+          setSelectedCategories={setSelectedCategories}
           stockFilter={stockFilter}
           setStockFilter={setStockFilter}
           brands={brands}
+          categories={categories}
+          onClear={() => {
+            setSearchTerm('');
+            setSelectedBrands([]);
+            setSelectedCategories([]);
+            setStockFilter([]);
+          }}
         />
       </div>
 
@@ -170,16 +176,25 @@ const InventoryPage: React.FC = () => {
 
         {/* Invoice Button */}
         {!isSelectMode && (
-          <button
-            onClick={() => {
-              setIsSelectMode(true);
-              setViewMode('card'); // Force card mode for selection
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/20 hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
-          >
-            <FileText className="h-4 w-4" />
-            Create Quotation
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/inventory/bulk-edit')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-all text-xs sm:text-sm"
+            >
+              <FileText className="h-4 w-4" />
+              Bulk Edit
+            </button>
+            <button
+              onClick={() => {
+                setIsSelectMode(true);
+                setViewMode('card'); // Force card mode for selection
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/20 hover:bg-purple-700 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
+            >
+              <FileText className="h-4 w-4" />
+              Create Quotation
+            </button>
+          </div>
         )}
       </div>
 
@@ -222,7 +237,7 @@ const InventoryPage: React.FC = () => {
               </div>
               <p className="text-slate-500 font-medium">No products match your current filters.</p>
               <button
-                onClick={() => { setSearchTerm(''); setSelectedBrand(''); setStockFilter('all'); }}
+                onClick={() => { setSearchTerm(''); setSelectedBrands([]); setSelectedCategories([]); setStockFilter([]); }}
                 className="mt-4 text-brand-600 font-bold hover:underline underline-offset-4"
               >
                 Clear all filters

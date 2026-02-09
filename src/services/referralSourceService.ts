@@ -1,12 +1,16 @@
 import { getClient, handleSupabaseError } from './apiUtils';
-import { SalesPerson } from '../types';
 
-export const salesPersonService = {
-    getSalesPersons: async (clerkToken?: string): Promise<SalesPerson[]> => {
+export interface ReferralSourceEntity {
+    id: string;
+    name: string;
+}
+
+export const referralSourceService = {
+    getReferralSources: async (clerkToken?: string): Promise<ReferralSourceEntity[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
-                .from('sales_persons')
+                .from('referral_sources')
                 .select('*');
 
 
@@ -16,21 +20,21 @@ export const salesPersonService = {
 
             handleSupabaseError(error);
 
-            return (data || []).map(person => ({
-                id: person.id,
-                name: person.name
+            return (data || []).map(source => ({
+                id: source.id,
+                name: source.name
             }));
         } catch (error) {
-            console.error('Error fetching sales persons:', error);
+            console.error('Error fetching referral sources:', error);
             throw error;
         }
     },
 
-    createSalesPerson: async (name: string, userId?: string, clerkToken?: string): Promise<SalesPerson> => {
+    createReferralSource: async (name: string, userId?: string, clerkToken?: string): Promise<ReferralSourceEntity> => {
         try {
             const client = getClient(clerkToken);
             const { data, error } = await client
-                .from('sales_persons')
+                .from('referral_sources')
                 .insert({
                     name: name.trim(),
                     created_by: userId
@@ -45,16 +49,16 @@ export const salesPersonService = {
                 name: data.name
             };
         } catch (error) {
-            console.error('Error creating sales person:', error);
+            console.error('Error creating referral source:', error);
             throw error;
         }
     },
 
-    updateSalesPerson: async (id: string, name: string, clerkToken?: string): Promise<SalesPerson> => {
+    updateReferralSource: async (id: string, name: string, clerkToken?: string): Promise<ReferralSourceEntity> => {
         try {
             const client = getClient(clerkToken);
             const { data, error } = await client
-                .from('sales_persons')
+                .from('referral_sources')
                 .update({ name: name.trim() })
                 .eq('id', id)
                 .select()
@@ -67,22 +71,22 @@ export const salesPersonService = {
                 name: data.name
             };
         } catch (error) {
-            console.error('Error updating sales person:', error);
+            console.error('Error updating referral source:', error);
             throw error;
         }
     },
 
-    deleteSalesPerson: async (id: string, clerkToken?: string): Promise<void> => {
+    deleteReferralSource: async (id: string, clerkToken?: string): Promise<void> => {
         try {
             const client = getClient(clerkToken);
             const { error } = await client
-                .from('sales_persons')
+                .from('referral_sources')
                 .delete()
                 .eq('id', id);
 
             handleSupabaseError(error);
         } catch (error) {
-            console.error('Error deleting sales person:', error);
+            console.error('Error deleting referral source:', error);
             throw error;
         }
     },

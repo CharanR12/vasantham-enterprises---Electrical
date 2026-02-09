@@ -1,12 +1,21 @@
 export type Brand = {
   id: string;
   name: string;
+  categoryCount?: number;
+  createdAt: string;
+};
+
+export type Category = {
+  id: string;
+  brandId: string;
+  name: string;
   createdAt: string;
 };
 
 export type Product = {
   id: string;
   brandId: string;
+  categoryId?: string;
   brand: Brand;
   productName: string;
   modelNumber: string;
@@ -22,6 +31,7 @@ export type Product = {
   // Optional fields for UI/Invoice selection
   saleDiscountAmount?: number;
   discount?: number;
+  createdBy?: string;
 };
 
 export type SaleEntry = {

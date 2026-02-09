@@ -2,19 +2,18 @@ import { getClient, handleSupabaseError } from './apiUtils';
 import { Product } from '../types/inventory';
 
 export const productService = {
-    getProducts: async (creatorId?: string, clerkToken?: string): Promise<Product[]> => {
+    getProducts: async (clerkToken?: string): Promise<Product[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
                 .from('products')
                 .select(`
           *,
-          brand:brands(id, name)
+          brand:brands(id, name),
+          category:categories(id, name)
         `);
 
-            if (creatorId) {
-                query = query.eq('created_by', creatorId);
-            }
+
 
             const { data, error } = await query
                 .order('created_at', { ascending: false });
@@ -25,6 +24,8 @@ export const productService = {
                 id: product.id,
                 brandId: product.brand_id,
                 brand: product.brand || { id: '', name: 'Unknown' },
+                categoryId: product.category_id,
+                category: product.category,
                 productName: product.product_name,
                 modelNumber: product.model_number,
                 quantityAvailable: product.quantity_available,
@@ -37,7 +38,8 @@ export const productService = {
                 saleDiscountPercent: product.sale_discount_percent || 0,
                 saleDiscountAmount: product.sale_discount_amount || 0,
                 createdAt: product.created_at,
-                updatedAt: product.updated_at
+                updatedAt: product.updated_at,
+                createdBy: product.created_by
             }));
         } catch (error) {
             console.error('Error fetching products:', error);
@@ -52,6 +54,7 @@ export const productService = {
                 .from('products')
                 .insert({
                     brand_id: productData.brandId,
+                    category_id: productData.categoryId,
                     product_name: productData.productName,
                     model_number: productData.modelNumber,
                     quantity_available: productData.quantityAvailable,
@@ -71,7 +74,7 @@ export const productService = {
 
             handleSupabaseError(error);
 
-            const products = await productService.getProducts(undefined, clerkToken);
+            const products = await productService.getProducts(clerkToken);
             return products.find(p => p.id === data.id)!;
         } catch (error) {
             console.error('Error creating product:', error);
@@ -86,6 +89,7 @@ export const productService = {
                 .from('products')
                 .update({
                     brand_id: productData.brandId,
+                    category_id: productData.categoryId,
                     product_name: productData.productName,
                     model_number: productData.modelNumber,
                     quantity_available: productData.quantityAvailable,
@@ -103,7 +107,7 @@ export const productService = {
 
             handleSupabaseError(error);
 
-            const products = await productService.getProducts(undefined, clerkToken);
+            const products = await productService.getProducts(clerkToken);
             return (products || []).find(p => p.id === id)!;
         } catch (error) {
             console.error('Error updating product:', error);
