@@ -11,6 +11,9 @@ import { useUserRole } from '../hooks/useUserRole';
 import {
     Dialog,
     DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
 } from '../components/ui/dialog';
 import {
     DropdownMenu,
@@ -240,6 +243,10 @@ const InvoicesPage: React.FC = () => {
             {viewingInvoice && (
                 <Dialog open={!!viewingInvoice} onOpenChange={() => setViewingInvoice(null)}>
                     <DialogContent className="w-full max-w-[95vw] md:max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 bg-white/95 backdrop-blur-xl rounded-xl sm:rounded-2xl">
+                        <DialogHeader className="sr-only">
+                            <DialogTitle>Invoice Details</DialogTitle>
+                            <DialogDescription>View detailed breakdown of invoice {viewingInvoice.invoiceNumber}</DialogDescription>
+                        </DialogHeader>
                         <div className="p-4 sm:p-6 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start gap-4 sm:gap-0">
                             <div>
                                 <h2 className="text-xl sm:text-2xl font-black text-slate-900 break-all">{viewingInvoice.invoiceNumber}</h2>

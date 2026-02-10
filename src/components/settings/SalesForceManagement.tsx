@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, Users, Edit2, Save, X, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Users, Edit2, Save, X, Trash2, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,11 @@ export const SalesForceManagement: React.FC<SalesForceManagementProps> = ({
     handleRemoveSalesPerson,
     handleCancel
 }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const filteredSalesPersons = salesPersons.filter(person =>
+        person.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     return (
         <div className="animate-fadeIn">
             <div className="mb-10">
@@ -87,73 +92,95 @@ export const SalesForceManagement: React.FC<SalesForceManagementProps> = ({
                     <p className="text-slate-500 font-medium">No sales representatives currently active.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {salesPersons.map((person) => (
-                        <div key={person.id} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:border-brand-200 transition-all duration-300 group">
-                            <div className="flex items-center justify-between">
-                                <div className="flex-1 mr-4">
-                                    {editingSalesPersonId === person.id ? (
-                                        <Input
-                                            type="text"
-                                            value={editSalesPersonName}
-                                            onChange={(e) => setEditSalesPersonName(e.target.value)}
-                                            className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 w-full"
-                                            disabled={actionLoading === person.id}
-                                            autoFocus
-                                        />
-                                    ) : (
-                                        <div className="flex items-center">
-                                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mr-4 border border-indigo-100 transition-colors group-hover:bg-brand-50 group-hover:border-brand-100">
-                                                <Users className="h-4 w-4 text-brand-600" />
-                                            </div>
-                                            <div className="text-sm font-bold text-slate-800 tracking-tight">{person.name}</div>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    {editingSalesPersonId === person.id ? (
-                                        <>
-                                            <button
-                                                onClick={() => handleSaveSalesPerson(person.id)}
-                                                className="text-emerald-600 hover:bg-emerald-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Save"
-                                                disabled={actionLoading === person.id || !editSalesPersonName.trim()}
-                                            >
-                                                {actionLoading === person.id ? <LoadingSpinner size="sm" /> : <Save className="h-4 w-4" />}
-                                            </button>
-                                            <button
-                                                onClick={handleCancel}
-                                                className="text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Cancel"
-                                                disabled={actionLoading === person.id}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button
-                                                onClick={() => handleEditSalesPerson(person.id, person.name)}
-                                                className="text-slate-400 hover:text-brand-600 hover:bg-brand-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Edit profile"
-                                                disabled={actionLoading !== null}
-                                            >
-                                                <Edit2 className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleRemoveSalesPerson(person.id)}
-                                                className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
-                                                title="Remove"
-                                                disabled={actionLoading !== null}
-                                            >
-                                                {actionLoading === person.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-4 w-4" />}
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
+                <div className="space-y-4">
+                    {/* Search */}
+                    {salesPersons.length > 3 && (
+                        <div className="relative">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                                placeholder="Search representatives..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="h-11 pl-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500"
+                            />
                         </div>
-                    ))}
+                    )}
+
+                    {filteredSalesPersons.length === 0 ? (
+                        <div className="text-center py-12 bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">
+                            <Search className="h-8 w-8 text-slate-200 mx-auto mb-3" />
+                            <p className="text-slate-400 font-medium text-sm">No representatives match "{searchTerm}"</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {filteredSalesPersons.map((person) => (
+                                <div key={person.id} className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:border-brand-200 transition-all duration-300 group">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1 mr-4">
+                                            {editingSalesPersonId === person.id ? (
+                                                <Input
+                                                    type="text"
+                                                    value={editSalesPersonName}
+                                                    onChange={(e) => setEditSalesPersonName(e.target.value)}
+                                                    className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 w-full"
+                                                    disabled={actionLoading === person.id}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mr-4 border border-indigo-100 transition-colors group-hover:bg-brand-50 group-hover:border-brand-100">
+                                                        <Users className="h-4 w-4 text-brand-600" />
+                                                    </div>
+                                                    <div className="text-sm font-bold text-slate-800 tracking-tight">{person.name}</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            {editingSalesPersonId === person.id ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleSaveSalesPerson(person.id)}
+                                                        className="text-emerald-600 hover:bg-emerald-50 p-2.5 rounded-xl transition-all duration-200"
+                                                        title="Save"
+                                                        disabled={actionLoading === person.id || !editSalesPersonName.trim()}
+                                                    >
+                                                        {actionLoading === person.id ? <LoadingSpinner size="sm" /> : <Save className="h-4 w-4" />}
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCancel}
+                                                        className="text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
+                                                        title="Cancel"
+                                                        disabled={actionLoading === person.id}
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleEditSalesPerson(person.id, person.name)}
+                                                        className="text-slate-400 hover:text-brand-600 hover:bg-brand-50 p-2.5 rounded-xl transition-all duration-200"
+                                                        title="Edit profile"
+                                                        disabled={actionLoading !== null}
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRemoveSalesPerson(person.id)}
+                                                        className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-2.5 rounded-xl transition-all duration-200"
+                                                        title="Remove"
+                                                        disabled={actionLoading !== null}
+                                                    >
+                                                        {actionLoading === person.id ? <LoadingSpinner size="sm" /> : <Trash2 className="h-4 w-4" />}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

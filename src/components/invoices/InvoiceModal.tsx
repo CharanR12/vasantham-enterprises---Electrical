@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Product, InvoiceItem, Invoice } from '../../types/inventory';
 import { useInvoices } from '../../hooks/useInvoices';
 import { generateInvoicePDF } from '../../utils/pdfGenerator';
 import { useDiscountTypesQuery, useProductsQuery } from '../../hooks/queries/useInventoryQueries';
 import { X, Trash2, Save, Download, AlertCircle } from 'lucide-react';
 
-interface InvoiceModalProps {
-    selectedProducts?: Product[];
-    invoice?: Invoice;
-    onClose: () => void;
-    onSave: () => void;
+interface InvoiceItemForm extends Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'> {
+    mrp: number | '';
+    salePrice: number | '';
+    discount: number | '';
+    quantity: number | '';
+    purchaseRate: number | '';
+    purchaseDiscountPercent: number | '';
+    purchaseDiscountedPrice: number | '';
+    saleDiscountPercent: number | '';
+    saleDiscountAmount: number | '';
 }
 
-const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invoice, onClose, onSave }) => {
+const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts, invoice, onClose, onSave }) => {
     const { createInvoice, updateInvoice, getNextInvoiceNumber, isCreating, isUpdating, createError, updateError } = useInvoices();
     const { data: discountTypes = [] } = useDiscountTypesQuery();
     const { data: allProducts = [] } = useProductsQuery();
@@ -29,7 +34,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
     const [companyName, setCompanyName] = useState('');
     const [invoiceNumber, setInvoiceNumber] = useState('');
     const [status, setStatus] = useState<Invoice['status']>('Unpaid');
-    const [items, setItems] = useState<Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[]>([]);
+    const [items, setItems] = useState<InvoiceItemForm[]>([]);
 
     // Error state
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,7 +65,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                 saleDiscountPercent: item.saleDiscountPercent,
                 saleDiscountAmount: item.saleDiscountAmount
             })));
-        } else if (selectedProducts.length > 0) {
+        } else if (selectedProducts && selectedProducts.length > 0) {
             // Creation Mode
             const initialItems = selectedProducts.map((product, index) => ({
                 productId: product.id,
@@ -91,16 +96,20 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
         }
     }, [isEditMode, invoice, selectedProducts]);
 
+
     // Update line totals
-    const updateItem = (index: number, field: keyof typeof items[0], value: any) => {
+    const updateItem = (index: number, field: keyof InvoiceItemForm, value: string | number) => {
         const newItems = [...items];
-        const item = { ...newItems[index], [field]: value };
+        let item = { ...newItems[index], [field]: value };
+
+        // Helper to get number value for calculations
+        const getNum = (val: string | number) => typeof val === 'number' ? val : (parseFloat(val) || 0);
 
         // Recalculate line total if price, qty, or discount changed
         if (field === 'salePrice' || field === 'quantity' || field === 'discount') {
-            const price = field === 'salePrice' ? value : item.salePrice;
-            const qty = field === 'quantity' ? value : item.quantity;
-            const disc = field === 'discount' ? value : (item.discount || 0);
+            const price = field === 'salePrice' ? getNum(value) : getNum(item.salePrice);
+            const qty = field === 'quantity' ? getNum(value) : getNum(item.quantity);
+            const disc = field === 'discount' ? getNum(value) : getNum(item.discount);
             item.lineTotal = (price * qty) - disc;
         }
 
@@ -120,7 +129,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
         const discountPercent = product?.salesDiscounts?.[discountTypeId] ?? 0;
 
         // Calculate sale price from MRP
-        const mrp = item.mrp || 0;
+        const mrp = typeof item.mrp === 'number' ? item.mrp : (parseFloat(item.mrp) || 0);
         const calculatedSalePrice = mrp - (mrp * discountPercent / 100);
 
         updateItem(index, 'salePrice', Math.round(calculatedSalePrice * 100) / 100);
@@ -147,13 +156,17 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
         }
 
         items.forEach((item, index) => {
-            if (item.quantity <= 0) {
+            const qty = typeof item.quantity === 'number' ? item.quantity : (parseFloat(item.quantity) || 0);
+            const price = typeof item.salePrice === 'number' ? item.salePrice : (parseFloat(item.salePrice) || 0);
+            const disc = typeof item.discount === 'number' ? item.discount : (parseFloat(item.discount) || 0);
+
+            if (qty <= 0) {
                 newErrors[`qty_${index}`] = 'Qty > 0';
             }
-            if (item.salePrice < 0) {
+            if (price < 0) {
                 newErrors[`price_${index}`] = 'No neg price';
             }
-            if (item.discount < 0) {
+            if (disc < 0) {
                 newErrors[`disc_${index}`] = 'No neg disc';
             }
         });
@@ -166,13 +179,27 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
         if (!validateForm()) return;
 
         try {
+            // Transform items back to strict numbers for API
+            const finalItems = items.map(item => ({
+                ...item,
+                mrp: typeof item.mrp === 'number' ? item.mrp : (parseFloat(item.mrp) || 0),
+                salePrice: typeof item.salePrice === 'number' ? item.salePrice : (parseFloat(item.salePrice) || 0),
+                discount: typeof item.discount === 'number' ? item.discount : (parseFloat(item.discount) || 0),
+                quantity: typeof item.quantity === 'number' ? item.quantity : (parseFloat(item.quantity) || 0),
+                purchaseRate: typeof item.purchaseRate === 'number' ? item.purchaseRate : (parseFloat(item.purchaseRate) || 0),
+                purchaseDiscountPercent: typeof item.purchaseDiscountPercent === 'number' ? item.purchaseDiscountPercent : (parseFloat(item.purchaseDiscountPercent) || 0),
+                purchaseDiscountedPrice: typeof item.purchaseDiscountedPrice === 'number' ? item.purchaseDiscountedPrice : (parseFloat(item.purchaseDiscountedPrice) || 0),
+                saleDiscountPercent: typeof item.saleDiscountPercent === 'number' ? item.saleDiscountPercent : (parseFloat(item.saleDiscountPercent) || 0),
+                saleDiscountAmount: typeof item.saleDiscountAmount === 'number' ? item.saleDiscountAmount : (parseFloat(item.saleDiscountAmount) || 0),
+            }));
+
             const invoiceData = {
                 invoiceNumber,
                 customerName: customerName.trim() || undefined,
                 companyName: companyName.trim() || undefined,
                 totalAmount: calculateTotal(),
                 status,
-                items: items
+                items: finalItems
             };
 
             if (isEditMode && invoice) {
@@ -244,6 +271,9 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                 </button>
                             </div>
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            {isEditMode ? 'Edit the details of the selected quotation' : 'Enter details to create a new quotation'}
+                        </DialogDescription>
                     </DialogHeader>
 
                     {/* Customer Details Form */}
@@ -330,8 +360,8 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                         <td className="p-3 text-right">
                                             <input
                                                 type="number"
-                                                value={item.mrp === 0 ? '' : item.mrp}
-                                                onChange={(e) => updateItem(index, 'mrp', parseFloat(e.target.value) || 0)}
+                                                value={item.mrp}
+                                                onChange={(e) => updateItem(index, 'mrp', e.target.value)}
                                                 className="w-20 p-1.5 text-sm text-right bg-slate-50 border border-transparent hover:border-slate-200 focus:border-brand-500 focus:bg-white rounded-lg outline-none transition-all font-medium text-slate-600"
                                                 placeholder="0"
                                             />
@@ -357,8 +387,8 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                         <td className="p-3 text-right">
                                             <input
                                                 type="number"
-                                                value={item.salePrice === 0 ? '' : item.salePrice}
-                                                onChange={(e) => updateItem(index, 'salePrice', parseFloat(e.target.value) || 0)}
+                                                value={item.salePrice}
+                                                onChange={(e) => updateItem(index, 'salePrice', e.target.value)}
                                                 className={`w-20 p-1.5 text-sm text-right bg-brand-50/50 border border-transparent hover:border-brand-200 focus:border-brand-500 focus:bg-white rounded-lg outline-none transition-all font-bold text-slate-900 ${errors[`price_${index}`] ? 'border-red-300 bg-red-50' : ''}`}
                                                 placeholder="0"
                                             />
@@ -366,8 +396,8 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                         <td className="p-3 text-center">
                                             <input
                                                 type="number"
-                                                value={item.quantity === 0 ? '' : item.quantity}
-                                                onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                                                value={item.quantity}
+                                                onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                                                 className={`w-14 p-1.5 text-sm text-center bg-slate-50 border border-transparent hover:border-slate-200 focus:border-brand-500 focus:bg-white rounded-lg outline-none transition-all font-bold text-slate-900 ${errors[`qty_${index}`] ? 'border-red-300 bg-red-50' : ''}`}
                                                 placeholder="1"
                                             />
@@ -375,8 +405,8 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                         <td className="p-3 text-right">
                                             <input
                                                 type="number"
-                                                value={item.discount === 0 ? '' : item.discount}
-                                                onChange={(e) => updateItem(index, 'discount', parseFloat(e.target.value) || 0)}
+                                                value={item.discount}
+                                                onChange={(e) => updateItem(index, 'discount', e.target.value)}
                                                 className={`w-20 p-1.5 text-sm text-right bg-green-50/50 border border-transparent hover:border-green-200 focus:border-green-500 focus:bg-white rounded-lg outline-none transition-all font-bold text-slate-900 ${errors[`disc_${index}`] ? 'border-red-300 bg-red-50' : ''}`}
                                                 placeholder="0"
                                             />

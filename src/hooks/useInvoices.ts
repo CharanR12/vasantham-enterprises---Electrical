@@ -1,40 +1,53 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '../services/invoiceService';
 import { Invoice, InvoiceItem } from '../types/inventory';
+import { useAuth } from '@clerk/clerk-react';
 
 export const useInvoices = () => {
     const queryClient = useQueryClient();
+    const { getToken } = useAuth();
 
     const invoicesQuery = useQuery({
         queryKey: ['invoices'],
-        queryFn: invoiceService.getAll,
+        queryFn: async () => {
+            const token = await getToken({ template: 'supabase' });
+            return invoiceService.getAll(token || undefined);
+        },
     });
 
     const createInvoiceMutation = useMutation({
-        mutationFn: (newInvoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }) =>
-            invoiceService.create(newInvoice),
+        mutationFn: async (newInvoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }) => {
+            const token = await getToken({ template: 'supabase' });
+            return invoiceService.create(newInvoice, token || undefined);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
         },
     });
 
     const deleteInvoiceMutation = useMutation({
-        mutationFn: (id: string) => invoiceService.delete(id),
+        mutationFn: async (id: string) => {
+            const token = await getToken({ template: 'supabase' });
+            return invoiceService.delete(id, token || undefined);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
         },
     });
 
     const updateInvoiceMutation = useMutation({
-        mutationFn: ({ id, invoice }: { id: string; invoice: Omit<Partial<Invoice>, 'items'> & { items?: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] } }) =>
-            invoiceService.update(id, invoice),
+        mutationFn: async ({ id, invoice }: { id: string; invoice: Omit<Partial<Invoice>, 'items'> & { items?: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] } }) => {
+            const token = await getToken({ template: 'supabase' });
+            return invoiceService.update(id, invoice, token || undefined);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
         },
     });
 
     const getNextInvoiceNumber = async () => {
-        return await invoiceService.getNextInvoiceNumber();
+        const token = await getToken({ template: 'supabase' });
+        return await invoiceService.getNextInvoiceNumber(token || undefined);
     };
 
     return {

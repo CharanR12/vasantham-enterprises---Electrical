@@ -4,9 +4,9 @@ import { handleSupabaseError } from './apiUtils';
 
 export const invoiceService = {
     // Fetch all invoices
-    getAll: async (): Promise<Invoice[]> => {
+    getAll: async (token?: string): Promise<Invoice[]> => {
         try {
-            const client = getClient();
+            const client = getClient(token);
             const { data: invoices, error } = await client
                 .from('invoices')
                 .select(`
@@ -55,9 +55,9 @@ export const invoiceService = {
     },
 
     // Get next invoice number
-    getNextInvoiceNumber: async (): Promise<string> => {
+    getNextInvoiceNumber: async (token?: string): Promise<string> => {
         try {
-            const client = getClient();
+            const client = getClient(token);
             const { data, error } = await client
                 .from('invoices')
                 .select('invoice_number')
@@ -86,9 +86,9 @@ export const invoiceService = {
     },
 
     // Create new invoice
-    create: async (invoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }): Promise<Invoice> => {
+    create: async (invoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }, token?: string): Promise<Invoice> => {
         try {
-            const client = getClient();
+            const client = getClient(token);
             // 1. Create invoice header
             const { data: newInvoice, error: invoiceError } = await client
                 .from('invoices')
@@ -136,7 +136,7 @@ export const invoiceService = {
 
             // 3. Update stock if status is Paid
             if (invoice.status === 'Paid') {
-                await invoiceService.updateStock(invoice.items, 'deduct');
+                await invoiceService.updateStock(invoice.items, 'deduct', token);
             }
 
             // Return Fetch the complete invoice to return standard format
@@ -188,9 +188,9 @@ export const invoiceService = {
     },
 
     // Update existing invoice
-    update: async (id: string, invoice: Omit<Partial<Invoice>, 'items'> & { items?: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }): Promise<Invoice> => {
+    update: async (id: string, invoice: Omit<Partial<Invoice>, 'items'> & { items?: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }, token?: string): Promise<Invoice> => {
         try {
-            const client = getClient();
+            const client = getClient(token);
 
             // Fetch original invoice to handle stock restoration if needed
             const { data: originalInvoice, error: fetchOriginalError } = await client
@@ -207,7 +207,7 @@ export const invoiceService = {
                     productId: item.product_id,
                     quantity: item.quantity
                 }));
-                await invoiceService.updateStock(originalItems, 'restore');
+                await invoiceService.updateStock(originalItems, 'restore', token);
             }
 
             // 2. Update invoice header if needed
@@ -273,7 +273,7 @@ export const invoiceService = {
                     productId: item.product_id,
                     quantity: item.quantity
                 }));
-                await invoiceService.updateStock(itemsToDeduct, 'deduct');
+                await invoiceService.updateStock(itemsToDeduct, 'deduct', token);
             }
 
             // Return updated invoice
@@ -325,9 +325,9 @@ export const invoiceService = {
     },
 
     // Delete invoice
-    delete: async (id: string): Promise<void> => {
+    delete: async (id: string, token?: string): Promise<void> => {
         try {
-            const client = getClient();
+            const client = getClient(token);
 
             // Fetch invoice to check status before deleting
             const { data: invoice, error: fetchError } = await client
@@ -344,7 +344,7 @@ export const invoiceService = {
                     productId: item.product_id,
                     quantity: item.quantity
                 }));
-                await invoiceService.updateStock(itemsToRestore, 'restore');
+                await invoiceService.updateStock(itemsToRestore, 'restore', token);
             }
 
             const { error } = await client
@@ -360,8 +360,8 @@ export const invoiceService = {
     },
 
     // Helper to update stock
-    updateStock: async (items: { productId: string; quantity: number }[], direction: 'deduct' | 'restore') => {
-        const client = getClient();
+    updateStock: async (items: { productId: string; quantity: number }[], direction: 'deduct' | 'restore', token?: string) => {
+        const client = getClient(token);
 
         // This should ideally be a database function to handle concurrency better,
         // but for now we'll do iterative updates.

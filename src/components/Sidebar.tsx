@@ -1,6 +1,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserButton, useClerk, useUser } from '@clerk/clerk-react';
+import { useUserRole } from '../hooks/useUserRole';
 import {
   ShoppingCart,
   Package,
@@ -58,6 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExport }) => {
   const location = useLocation();
   const { openOrganizationProfile } = useClerk();
   const { user } = useUser();
+  const { currentRole } = useUserRole();
   const { isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen } = useSidebar();
 
   // Scroll to top on route change
@@ -204,11 +206,13 @@ const Sidebar: React.FC<SidebarProps> = ({ onExport }) => {
             }}
           >
             <UserButton.MenuItems>
-              <UserButton.Action
-                label="Manage Organization"
-                labelIcon={<Building2 className="h-4 w-4 text-brand-500" />}
-                onClick={() => openOrganizationProfile()}
-              />
+              {currentRole === 'admin' && (
+                <UserButton.Action
+                  label="Manage Organization"
+                  labelIcon={<Building2 className="h-4 w-4 text-brand-500" />}
+                  onClick={() => openOrganizationProfile()}
+                />
+              )}
             </UserButton.MenuItems>
           </UserButton>
           {!isCollapsed && (

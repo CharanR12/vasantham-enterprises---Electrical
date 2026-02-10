@@ -36,8 +36,13 @@ const SettingsPage: React.FC = () => {
     expandedBrandId,
     newCategoryName,
     setNewCategoryName,
+    editingCategoryId,
+    editCategoryName,
+    setEditCategoryName,
     handleToggleBrandExpand,
     handleAddCategory,
+    handleEditCategory,
+    handleSaveCategory,
     handleRemoveCategory,
 
     // Sales person states/handlers
@@ -87,8 +92,8 @@ const SettingsPage: React.FC = () => {
 
       <div className="premium-card overflow-hidden">
         {/* Tab Navigation */}
-        <div className="bg-slate-50/50 border-b border-slate-200/60 p-1">
-          <nav className="flex space-x-1">
+        <div className="bg-slate-50/50 border-b border-slate-200/60 p-1 overflow-x-auto">
+          <nav className="flex space-x-1 min-w-max">
             <button
               onClick={() => setActiveTab('inventory')}
               className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'inventory'
@@ -97,7 +102,7 @@ const SettingsPage: React.FC = () => {
                 }`}
             >
               <Package className={`h-4 w-4 ${activeTab === 'inventory' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-widest">Inventory Assets</span>
+              <span className="uppercase tracking-wider text-xs sm:text-sm">Inventory</span>
             </button>
             <button
               onClick={() => setActiveTab('sales')}
@@ -107,7 +112,7 @@ const SettingsPage: React.FC = () => {
                 }`}
             >
               <Users className={`h-4 w-4 ${activeTab === 'sales' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-widest">Sales Team</span>
+              <span className="uppercase tracking-wider text-xs sm:text-sm">Sales Team</span>
             </button>
             <button
               onClick={() => setActiveTab('referral')}
@@ -117,7 +122,7 @@ const SettingsPage: React.FC = () => {
                 }`}
             >
               <Share2 className={`h-4 w-4 ${activeTab === 'referral' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-widest">Referral Sources</span>
+              <span className="uppercase tracking-wider text-xs sm:text-sm">Referrals</span>
             </button>
             <button
               onClick={() => setActiveTab('discounts')}
@@ -127,7 +132,7 @@ const SettingsPage: React.FC = () => {
                 }`}
             >
               <Tag className={`h-4 w-4 ${activeTab === 'discounts' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-widest">Discount Types</span>
+              <span className="uppercase tracking-wider text-xs sm:text-sm">Discounts</span>
             </button>
           </nav>
         </div>
@@ -161,8 +166,13 @@ const SettingsPage: React.FC = () => {
               expandedBrandId={expandedBrandId}
               newCategoryName={newCategoryName}
               setNewCategoryName={setNewCategoryName}
+              editingCategoryId={editingCategoryId}
+              editCategoryName={editCategoryName}
+              setEditCategoryName={setEditCategoryName}
               handleToggleBrandExpand={handleToggleBrandExpand}
               handleAddCategory={handleAddCategory}
+              handleEditCategory={handleEditCategory}
+              handleSaveCategory={handleSaveCategory}
               handleRemoveCategory={handleRemoveCategory}
 
               handleCancel={handleCancel}

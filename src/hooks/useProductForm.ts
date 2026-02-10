@@ -221,6 +221,27 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         });
     };
 
+    const handleDiscountPriceChange = (discountTypeId: string, priceValue: string) => {
+        const price = parseFloat(priceValue);
+        const mrp = typeof formData.mrp === 'number' ? formData.mrp : parseFloat(String(formData.mrp)) || 0;
+
+        if (mrp > 0 && !isNaN(price)) {
+            const discountPercent = Number((((mrp - price) / mrp) * 100).toFixed(2));
+            setFormData(prev => ({
+                ...prev,
+                salesDiscounts: {
+                    ...prev.salesDiscounts,
+                    [discountTypeId]: discountPercent
+                }
+            }));
+        } else if (isNaN(price)) {
+            // If input is cleared or invalid, don't update percent to NaN, maybe just keep it or set to 0? 
+            // Setting to 0 percent means full price.
+            // Actually if price is empty string (NaN), we might want to just let them type.
+            // But for now, let's only update if we have a valid price.
+        }
+    };
+
     return {
         brands,
         categories: filteredCategories,
@@ -244,6 +265,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         handleAddBrand,
         handleChange,
         handleDiscountChange,
-        handleRemoveDiscount
+        handleRemoveDiscount,
+        handleDiscountPriceChange
     };
 };

@@ -6,6 +6,7 @@ import {
     useDeleteBrandMutation,
     useCategoriesQuery,
     useAddCategoryMutation,
+    useUpdateCategoryMutation,
     useDeleteCategoryMutation
 } from './queries/useInventoryQueries';
 import {
@@ -39,6 +40,7 @@ export const useSettings = () => {
     const deleteBrandMutation = useDeleteBrandMutation();
 
     const addCategoryMutation = useAddCategoryMutation();
+    const updateCategoryMutation = useUpdateCategoryMutation();
     const deleteCategoryMutation = useDeleteCategoryMutation();
 
     const addSalesPersonMutation = useAddSalesPersonMutation();
@@ -60,6 +62,8 @@ export const useSettings = () => {
     // Category State
     const [expandedBrandId, setExpandedBrandId] = useState<string | null>(null);
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+    const [editCategoryName, setEditCategoryName] = useState('');
 
     const [editingSalesPersonId, setEditingSalesPersonId] = useState<string | null>(null);
     const [editSalesPersonName, setEditSalesPersonName] = useState('');
@@ -142,6 +146,27 @@ export const useSettings = () => {
             setNewCategoryName('');
         } catch (err: any) {
             setActionError(err.message || 'Failed to add category');
+        }
+    };
+
+    const handleEditCategory = (id: string, name: string) => {
+        setEditingCategoryId(id);
+        setEditCategoryName(name);
+        setActionError(null);
+    };
+
+    const handleSaveCategory = async (id: string) => {
+        if (!editCategoryName.trim()) {
+            setActionError('Category name cannot be empty');
+            return;
+        }
+
+        try {
+            await updateCategoryMutation.mutateAsync({ id, name: editCategoryName.trim() });
+            setEditingCategoryId(null);
+            setEditCategoryName('');
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to update category');
         }
     };
 
@@ -293,6 +318,8 @@ export const useSettings = () => {
     const handleCancel = () => {
         setEditingBrandId(null);
         setEditBrandName('');
+        setEditingCategoryId(null);
+        setEditCategoryName('');
         setEditingSalesPersonId(null);
         setEditSalesPersonName('');
         setEditingReferralSourceId(null);
@@ -307,16 +334,17 @@ export const useSettings = () => {
         updateBrandMutation.isPending ? editingBrandId :
             deleteBrandMutation.isPending ? deleteBrandMutation.variables :
                 addCategoryMutation.isPending ? 'add-category' :
-                    deleteCategoryMutation.isPending ? deleteCategoryMutation.variables :
-                        addSalesPersonMutation.isPending ? 'add-sales-person' :
-                            updateSalesPersonMutation.isPending ? editingSalesPersonId :
-                                deleteSalesPersonMutation.isPending ? deleteSalesPersonMutation.variables :
-                                    addReferralSourceMutation.isPending ? 'add-referral-source' :
-                                        updateReferralSourceMutation.isPending ? editingReferralSourceId :
-                                            deleteReferralSourceMutation.isPending ? deleteReferralSourceMutation.variables :
-                                                addDiscountTypeMutation.isPending ? 'add-discount-type' :
-                                                    updateDiscountTypeMutation.isPending ? editingDiscountTypeId :
-                                                        deleteDiscountTypeMutation.isPending ? deleteDiscountTypeMutation.variables : null;
+                    updateCategoryMutation.isPending ? editingCategoryId :
+                        deleteCategoryMutation.isPending ? deleteCategoryMutation.variables :
+                            addSalesPersonMutation.isPending ? 'add-sales-person' :
+                                updateSalesPersonMutation.isPending ? editingSalesPersonId :
+                                    deleteSalesPersonMutation.isPending ? deleteSalesPersonMutation.variables :
+                                        addReferralSourceMutation.isPending ? 'add-referral-source' :
+                                            updateReferralSourceMutation.isPending ? editingReferralSourceId :
+                                                deleteReferralSourceMutation.isPending ? deleteReferralSourceMutation.variables :
+                                                    addDiscountTypeMutation.isPending ? 'add-discount-type' :
+                                                        updateDiscountTypeMutation.isPending ? editingDiscountTypeId :
+                                                            deleteDiscountTypeMutation.isPending ? deleteDiscountTypeMutation.variables : null;
 
     return {
         brands,
@@ -345,8 +373,13 @@ export const useSettings = () => {
         expandedBrandId,
         newCategoryName,
         setNewCategoryName,
+        editingCategoryId,
+        editCategoryName,
+        setEditCategoryName,
         handleToggleBrandExpand,
         handleAddCategory,
+        handleEditCategory,
+        handleSaveCategory,
         handleRemoveCategory,
 
         // Sales person states/handlers
