@@ -12,6 +12,13 @@ export type Category = {
   createdAt: string;
 };
 
+export type DiscountType = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
 export type Product = {
   id: string;
   brandId: string;
@@ -28,6 +35,7 @@ export type Product = {
   saleDiscountPercent: number;
   createdAt: string;
   updatedAt?: string;
+  salesDiscounts?: Record<string, number>; // { discountTypeId: percentage }
   // Optional fields for UI/Invoice selection
   saleDiscountAmount?: number;
   discount?: number;

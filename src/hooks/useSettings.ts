@@ -20,12 +20,19 @@ import {
     useUpdateReferralSourceMutation,
     useDeleteReferralSourceMutation
 } from './queries/useReferralSourceQueries';
+import {
+    useDiscountTypesQuery,
+    useAddDiscountTypeMutation,
+    useUpdateDiscountTypeMutation,
+    useDeleteDiscountTypeMutation
+} from './queries/useInventoryQueries';
 
 export const useSettings = () => {
     const { data: brands = [], isLoading: brandsLoading, error: brandsError } = useBrandsQuery();
     const { data: categories = [], isLoading: categoriesLoading } = useCategoriesQuery();
     const { data: salesPersons = [], isLoading: sPLoading, error: sPError } = useSalesPersonsQuery();
     const { data: referralSources = [], isLoading: rsLoading, error: rsError } = useReferralSourcesQuery();
+    const { data: discountTypes = [], isLoading: dtLoading, error: dtError } = useDiscountTypesQuery();
 
     const addBrandMutation = useAddBrandMutation();
     const updateBrandMutation = useUpdateBrandMutation();
@@ -42,6 +49,10 @@ export const useSettings = () => {
     const updateReferralSourceMutation = useUpdateReferralSourceMutation();
     const deleteReferralSourceMutation = useDeleteReferralSourceMutation();
 
+    const addDiscountTypeMutation = useAddDiscountTypeMutation();
+    const updateDiscountTypeMutation = useUpdateDiscountTypeMutation();
+    const deleteDiscountTypeMutation = useDeleteDiscountTypeMutation();
+
     const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
     const [editBrandName, setEditBrandName] = useState('');
     const [newBrandName, setNewBrandName] = useState('');
@@ -57,6 +68,10 @@ export const useSettings = () => {
     const [editingReferralSourceId, setEditingReferralSourceId] = useState<string | null>(null);
     const [editReferralSourceName, setEditReferralSourceName] = useState('');
     const [newReferralSourceName, setNewReferralSourceName] = useState('');
+
+    const [editingDiscountTypeId, setEditingDiscountTypeId] = useState<string | null>(null);
+    const [editDiscountTypeName, setEditDiscountTypeName] = useState('');
+    const [newDiscountTypeName, setNewDiscountTypeName] = useState('');
 
     const [actionError, setActionError] = useState<string | null>(null);
 
@@ -230,6 +245,51 @@ export const useSettings = () => {
         }
     };
 
+    const handleEditDiscountType = (id: string, name: string) => {
+        setEditingDiscountTypeId(id);
+        setEditDiscountTypeName(name);
+        setActionError(null);
+    };
+
+    const handleSaveDiscountType = async () => {
+        if (!editingDiscountTypeId || !editDiscountTypeName.trim()) {
+            setActionError('Discount type name cannot be empty');
+            return;
+        }
+
+        try {
+            await updateDiscountTypeMutation.mutateAsync({ id: editingDiscountTypeId, name: editDiscountTypeName.trim() });
+            setEditingDiscountTypeId(null);
+            setEditDiscountTypeName('');
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to update discount type');
+        }
+    };
+
+    const handleAddDiscountType = async () => {
+        if (!newDiscountTypeName.trim()) {
+            setActionError('Discount type name cannot be empty');
+            return;
+        }
+
+        try {
+            await addDiscountTypeMutation.mutateAsync(newDiscountTypeName.trim());
+            setNewDiscountTypeName('');
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to add discount type');
+        }
+    };
+
+    const handleRemoveDiscountType = async (id: string) => {
+        if (!confirm('Are you sure you want to remove this discount type?')) return;
+
+        try {
+            await deleteDiscountTypeMutation.mutateAsync(id);
+        } catch (err: any) {
+            setActionError(err.message || 'Failed to remove discount type');
+        }
+    };
+
     const handleCancel = () => {
         setEditingBrandId(null);
         setEditBrandName('');
@@ -237,6 +297,8 @@ export const useSettings = () => {
         setEditSalesPersonName('');
         setEditingReferralSourceId(null);
         setEditReferralSourceName('');
+        setEditingDiscountTypeId(null);
+        setEditDiscountTypeName('');
         setActionError(null);
         setNewCategoryName('');
     };
@@ -251,15 +313,19 @@ export const useSettings = () => {
                                 deleteSalesPersonMutation.isPending ? deleteSalesPersonMutation.variables :
                                     addReferralSourceMutation.isPending ? 'add-referral-source' :
                                         updateReferralSourceMutation.isPending ? editingReferralSourceId :
-                                            deleteReferralSourceMutation.isPending ? deleteReferralSourceMutation.variables : null;
+                                            deleteReferralSourceMutation.isPending ? deleteReferralSourceMutation.variables :
+                                                addDiscountTypeMutation.isPending ? 'add-discount-type' :
+                                                    updateDiscountTypeMutation.isPending ? editingDiscountTypeId :
+                                                        deleteDiscountTypeMutation.isPending ? deleteDiscountTypeMutation.variables : null;
 
     return {
         brands,
         categories,
         salesPersons,
         referralSources,
-        loading: brandsLoading || sPLoading || rsLoading || categoriesLoading,
-        error: brandsError || sPError || rsError,
+        discountTypes,
+        loading: brandsLoading || sPLoading || rsLoading || categoriesLoading || dtLoading,
+        error: brandsError || sPError || rsError || dtError,
         actionLoading: actionLoading as string | null,
         actionError,
         setActionError,
@@ -304,6 +370,17 @@ export const useSettings = () => {
         handleSaveReferralSource,
         handleAddReferralSource,
         handleRemoveReferralSource,
+
+        // Discount type states/handlers
+        editingDiscountTypeId,
+        editDiscountTypeName,
+        setEditDiscountTypeName,
+        newDiscountTypeName,
+        setNewDiscountTypeName,
+        handleEditDiscountType,
+        handleSaveDiscountType,
+        handleAddDiscountType,
+        handleRemoveDiscountType,
 
         handleCancel
     };

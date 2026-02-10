@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Product, InvoiceItem, Invoice } from '../../types/inventory';
 import { useInvoices } from '../../hooks/useInvoices';
 import { generateInvoicePDF } from '../../utils/pdfGenerator';
+import { useDiscountTypesQuery, useProductsQuery } from '../../hooks/queries/useInventoryQueries';
 import { X, Trash2, Save, Download, AlertCircle } from 'lucide-react';
 
 interface InvoiceModalProps {
@@ -14,9 +15,14 @@ interface InvoiceModalProps {
 
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invoice, onClose, onSave }) => {
     const { createInvoice, updateInvoice, getNextInvoiceNumber, isCreating, isUpdating, createError, updateError } = useInvoices();
+    const { data: discountTypes = [] } = useDiscountTypesQuery();
+    const { data: allProducts = [] } = useProductsQuery();
     const isEditMode = !!invoice;
     const isLoading = isCreating || isUpdating;
     const error = createError || updateError;
+
+    // Track which discount type is selected per item index
+    const [itemDiscountTypes, setItemDiscountTypes] = useState<Record<number, string>>({});
 
     // Form state
     const [customerName, setCustomerName] = useState('');
@@ -100,6 +106,24 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
 
         newItems[index] = item;
         setItems(newItems);
+    };
+
+    // Handle discount type change for a line item
+    const handleDiscountTypeChange = (index: number, discountTypeId: string) => {
+        setItemDiscountTypes(prev => ({ ...prev, [index]: discountTypeId }));
+
+        if (!discountTypeId) return;
+
+        // Look up the product to get its salesDiscounts
+        const item = items[index];
+        const product = allProducts.find(p => p.id === item.productId);
+        const discountPercent = product?.salesDiscounts?.[discountTypeId] ?? 0;
+
+        // Calculate sale price from MRP
+        const mrp = item.mrp || 0;
+        const calculatedSalePrice = mrp - (mrp * discountPercent / 100);
+
+        updateItem(index, 'salePrice', Math.round(calculatedSalePrice * 100) / 100);
     };
 
     const removeItem = (index: number) => {
@@ -273,6 +297,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                     <th className="text-left text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 pl-2">Product</th>
                                     <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-20">Rate</th>
                                     <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-24">MRP</th>
+                                    <th className="text-left text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-32">Discount Type</th>
                                     <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-24">Sale Price</th>
                                     <th className="text-center text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-20">Qty</th>
                                     <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-24">Disc</th>
@@ -310,6 +335,24 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                                                 className="w-20 p-1.5 text-sm text-right bg-slate-50 border border-transparent hover:border-slate-200 focus:border-brand-500 focus:bg-white rounded-lg outline-none transition-all font-medium text-slate-600"
                                                 placeholder="0"
                                             />
+                                        </td>
+                                        <td className="p-3">
+                                            <select
+                                                value={itemDiscountTypes[index] || ''}
+                                                onChange={(e) => handleDiscountTypeChange(index, e.target.value)}
+                                                className="w-full p-1.5 text-xs bg-white border border-slate-200 hover:border-brand-300 focus:border-brand-500 rounded-lg outline-none transition-all font-medium text-slate-700"
+                                            >
+                                                <option value="">Manual</option>
+                                                {discountTypes.map(dt => {
+                                                    const product = allProducts.find(p => p.id === item.productId);
+                                                    const pct = product?.salesDiscounts?.[dt.id];
+                                                    return (
+                                                        <option key={dt.id} value={dt.id}>
+                                                            {dt.name}{pct !== undefined ? ` (${pct}%)` : ''}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
                                         </td>
                                         <td className="p-3 text-right">
                                             <input
@@ -383,7 +426,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts = [], invo
                             ) : (
                                 <Save className="h-4 w-4" />
                             )}
-                            {isEditMode ? 'Update Invoice' : 'Save Invoice'}
+                            {isEditMode ? 'Update Quotation' : 'Save Quotation'}
                         </button>
                     </div>
                 </div>

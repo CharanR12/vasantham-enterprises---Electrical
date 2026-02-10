@@ -7,6 +7,7 @@ import ErrorMessage from '../components/ErrorMessage';
 import { Invoice, InvoiceItem } from '../types/inventory';
 import InvoiceModal from '../components/invoices/InvoiceModal';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { useUserRole } from '../hooks/useUserRole';
 import {
     Dialog,
     DialogContent,
@@ -26,6 +27,7 @@ const InvoicesPage: React.FC = () => {
     const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [duplicatingProducts, setDuplicatingProducts] = useState<any[] | null>(null);
+    const { currentRole } = useUserRole();
 
     const filteredInvoices = (invoices || []).filter((invoice: Invoice) => {
         const displayId = invoice.invoiceNumber.replace(/^INV-/, 'QTN-');
@@ -170,10 +172,12 @@ const InvoicesPage: React.FC = () => {
                                                 <Copy className="mr-2 h-4 w-4" />
                                                 Duplicate
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={(e: React.MouseEvent) => handleDelete(e, invoice.id)} className="cursor-pointer font-medium text-red-600 focus:text-red-700 focus:bg-red-50">
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Delete
-                                            </DropdownMenuItem>
+                                            {currentRole === 'admin' && (
+                                                <DropdownMenuItem onClick={(e: React.MouseEvent) => handleDelete(e, invoice.id)} className="cursor-pointer font-medium text-red-600 focus:text-red-700 focus:bg-red-50">
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            )}
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={() => generateInvoicePDF(invoice)} className="cursor-pointer font-medium text-slate-600 focus:text-slate-900 focus:bg-slate-50">
                                                 <Download className="mr-2 h-4 w-4" />

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Product } from '../../types/inventory';
 import { useProductForm } from '../../hooks/useProductForm';
 import { useUserRole } from '../../hooks/useUserRole';
-import { X, Trash2, ChevronRight, Check } from 'lucide-react';
+import { X, Trash2, ChevronRight, Check, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -33,7 +33,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
     handleSubmit,
     handleDelete,
     handleAddBrand,
-    handleChange
+    handleChange,
+    discountTypes,
+    handleDiscountChange,
+    handleRemoveDiscount
   } = useProductForm(product, onClose);
 
   const { currentRole, user } = useUserRole();
@@ -304,18 +307,78 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
                         className="h-11 bg-slate-50 border-slate-200 rounded-xl text-slate-500"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="saleDiscountPercent" className="text-sm font-medium text-slate-700">Sales Discount %</Label>
-                      <Input
-                        id="saleDiscountPercent"
-                        type="number"
-                        name="saleDiscountPercent"
-                        value={formData.saleDiscountPercent}
-                        onChange={handleChange}
-                        className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
-                        disabled={formLoading || deleteLoading}
-                      />
-                    </div>
+                    {discountTypes.length > 0 && (
+                      <div className="space-y-3 sm:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium text-slate-700">Sales Discounts</Label>
+                          {/* Only show Add button if there are unused discount types */}
+                          {discountTypes.filter(dt => !(formData.salesDiscounts && dt.id in formData.salesDiscounts)).length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const unused = discountTypes.find(dt => !(formData.salesDiscounts && dt.id in formData.salesDiscounts));
+                                if (unused) handleDiscountChange(unused.id, '0');
+                              }}
+                              disabled={formLoading || deleteLoading}
+                              className="flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 px-2 py-1 rounded-lg hover:bg-brand-50 transition-colors"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Add Discount
+                            </button>
+                          )}
+                        </div>
+                        {/* Render rows for each selected discount */}
+                        {formData.salesDiscounts && Object.keys(formData.salesDiscounts).length > 0 ? (
+                          <div className="space-y-2">
+                            {Object.entries(formData.salesDiscounts).map(([dtId, pct]) => {
+                              const usedIds = Object.keys(formData.salesDiscounts || {});
+                              const availableTypes = discountTypes.filter(dt => dt.id === dtId || !usedIds.includes(dt.id));
+                              return (
+                                <div key={dtId} className="flex items-center gap-2">
+                                  <select
+                                    value={dtId}
+                                    onChange={(e) => {
+                                      const newId = e.target.value;
+                                      if (newId !== dtId) {
+                                        handleRemoveDiscount(dtId);
+                                        handleDiscountChange(newId, String(pct));
+                                      }
+                                    }}
+                                    disabled={formLoading || deleteLoading}
+                                    className="flex-1 h-10 px-3 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all font-medium"
+                                  >
+                                    {availableTypes.map(dt => (
+                                      <option key={dt.id} value={dt.id}>{dt.name}</option>
+                                    ))}
+                                  </select>
+                                  <Input
+                                    type="number"
+                                    value={pct}
+                                    onChange={(e) => handleDiscountChange(dtId, e.target.value)}
+                                    className="w-24 h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 text-center"
+                                    placeholder="0%"
+                                    min="0"
+                                    max="100"
+                                    step="0.1"
+                                    disabled={formLoading || deleteLoading}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDiscount(dtId)}
+                                    disabled={formLoading || deleteLoading}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">No discounts added. Click "Add Discount" to get started.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

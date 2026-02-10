@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Package, Users, Share2 } from 'lucide-react';
+import { Package, Users, Share2, Tag } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
 import { useSettings } from '../hooks/useSettings';
 import { BrandManagement } from '../components/settings/BrandManagement';
 import { SalesForceManagement } from '../components/settings/SalesForceManagement';
 import { ReferralSourceManagement } from '../components/settings/ReferralSourceManagement';
+import { DiscountTypeManagement } from '../components/settings/DiscountTypeManagement';
 
 const SettingsPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'inventory' | 'sales' | 'referral'>('inventory');
+  const [activeTab, setActiveTab] = useState<'inventory' | 'sales' | 'referral' | 'discounts'>('inventory');
 
   const {
     brands,
@@ -29,6 +30,15 @@ const SettingsPage: React.FC = () => {
     handleSaveBrand,
     handleAddBrand,
     handleRemoveBrand,
+
+    // Category states/handlers
+    categories,
+    expandedBrandId,
+    newCategoryName,
+    setNewCategoryName,
+    handleToggleBrandExpand,
+    handleAddCategory,
+    handleRemoveCategory,
 
     // Sales person states/handlers
     editingSalesPersonId,
@@ -52,14 +62,17 @@ const SettingsPage: React.FC = () => {
     handleAddReferralSource,
     handleRemoveReferralSource,
 
-    // Category states/handlers
-    categories,
-    expandedBrandId,
-    newCategoryName,
-    setNewCategoryName,
-    handleToggleBrandExpand,
-    handleAddCategory,
-    handleRemoveCategory,
+    // Discount type states/handlers
+    discountTypes,
+    editingDiscountTypeId,
+    editDiscountTypeName,
+    setEditDiscountTypeName,
+    newDiscountTypeName,
+    setNewDiscountTypeName,
+    handleEditDiscountType,
+    handleSaveDiscountType,
+    handleAddDiscountType,
+    handleRemoveDiscountType,
 
     handleCancel
   } = useSettings();
@@ -105,6 +118,16 @@ const SettingsPage: React.FC = () => {
             >
               <Share2 className={`h-4 w-4 ${activeTab === 'referral' ? 'text-brand-500' : ''}`} />
               <span className="uppercase tracking-widest">Referral Sources</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('discounts')}
+              className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'discounts'
+                ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                }`}
+            >
+              <Tag className={`h-4 w-4 ${activeTab === 'discounts' ? 'text-brand-500' : ''}`} />
+              <span className="uppercase tracking-widest">Discount Types</span>
             </button>
           </nav>
         </div>
@@ -160,7 +183,7 @@ const SettingsPage: React.FC = () => {
               handleRemoveSalesPerson={handleRemoveSalesPerson}
               handleCancel={handleCancel}
             />
-          ) : (
+          ) : activeTab === 'referral' ? (
             <ReferralSourceManagement
               referralSources={referralSources}
               loading={loading}
@@ -174,6 +197,22 @@ const SettingsPage: React.FC = () => {
               handleEditReferralSource={handleEditReferralSource}
               handleSaveReferralSource={handleSaveReferralSource}
               handleRemoveReferralSource={handleRemoveReferralSource}
+              handleCancel={handleCancel}
+            />
+          ) : (
+            <DiscountTypeManagement
+              discountTypes={discountTypes}
+              loading={loading}
+              actionLoading={actionLoading}
+              newDiscountTypeName={newDiscountTypeName}
+              setNewDiscountTypeName={setNewDiscountTypeName}
+              editingDiscountTypeId={editingDiscountTypeId}
+              editDiscountTypeName={editDiscountTypeName}
+              setEditDiscountTypeName={setEditDiscountTypeName}
+              handleAddDiscountType={handleAddDiscountType}
+              handleEditDiscountType={handleEditDiscountType}
+              handleSaveDiscountType={handleSaveDiscountType}
+              handleRemoveDiscountType={handleRemoveDiscountType}
               handleCancel={handleCancel}
             />
           )}

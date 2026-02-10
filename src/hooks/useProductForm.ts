@@ -6,13 +6,15 @@ import {
     useAddProductMutation,
     useUpdateProductMutation,
     useDeleteProductMutation,
-    useAddBrandMutation
+    useAddBrandMutation,
+    useDiscountTypesQuery
 } from './queries/useInventoryQueries';
 import { format } from 'date-fns';
 
 export const useProductForm = (product: Product | undefined, onClose: () => void) => {
     const { data: brands = [] } = useBrandsQuery();
     const { data: categories = [] } = useCategoriesQuery();
+    const { data: discountTypes = [] } = useDiscountTypesQuery();
     const addProductMutation = useAddProductMutation();
     const updateProductMutation = useUpdateProductMutation();
     const deleteProductMutation = useDeleteProductMutation();
@@ -36,7 +38,8 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         purchaseDiscountedPrice: '' as number | '',
         salePrice: '' as number | '',
         saleDiscountPercent: '' as number | '',
-        updatedAt: '' as string | undefined
+        updatedAt: '' as string | undefined,
+        salesDiscounts: {} as Record<string, number>
     };
 
     const [formData, setFormData] = useState(product ? {
@@ -51,7 +54,8 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         purchaseDiscountedPrice: product.purchaseDiscountedPrice || '' as number | '',
         salePrice: product.salePrice || '' as number | '',
         saleDiscountPercent: product.saleDiscountPercent || '' as number | '',
-        updatedAt: product.updatedAt
+        updatedAt: product.updatedAt,
+        salesDiscounts: product.salesDiscounts || {}
     } : { ...initialState, updatedAt: new Date().toISOString() });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -106,7 +110,8 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
                 purchaseDiscountedPrice: formData.purchaseDiscountedPrice === '' ? 0 : formData.purchaseDiscountedPrice,
                 salePrice: formData.salePrice === '' ? 0 : formData.salePrice,
                 saleDiscountPercent: formData.saleDiscountPercent === '' ? 0 : formData.saleDiscountPercent,
-                updatedAt: formData.updatedAt // This is now passed to the service
+                updatedAt: formData.updatedAt, // This is now passed to the service
+                salesDiscounts: formData.salesDiscounts
             };
 
             if (product) {
@@ -197,9 +202,29 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         });
     };
 
+    const handleDiscountChange = (discountTypeId: string, value: string) => {
+        const numValue = parseFloat(value);
+        setFormData(prev => ({
+            ...prev,
+            salesDiscounts: {
+                ...prev.salesDiscounts,
+                [discountTypeId]: isNaN(numValue) ? 0 : numValue
+            }
+        }));
+    };
+
+    const handleRemoveDiscount = (discountTypeId: string) => {
+        setFormData(prev => {
+            const updated = { ...prev.salesDiscounts };
+            delete updated[discountTypeId];
+            return { ...prev, salesDiscounts: updated };
+        });
+    };
+
     return {
         brands,
         categories: filteredCategories,
+        discountTypes,
         formData,
         setFormData,
         errors,
@@ -217,6 +242,8 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         handleSubmit,
         handleDelete,
         handleAddBrand,
-        handleChange
+        handleChange,
+        handleDiscountChange,
+        handleRemoveDiscount
     };
 };

@@ -37,6 +37,7 @@ export const productService = {
                 salePrice: product.sale_price || 0,
                 saleDiscountPercent: product.sale_discount_percent || 0,
                 saleDiscountAmount: product.sale_discount_amount || 0,
+                salesDiscounts: product.sales_discounts || {},
                 createdAt: product.created_at,
                 updatedAt: product.updated_at,
                 createdBy: product.created_by
@@ -66,6 +67,7 @@ export const productService = {
                     sale_price: productData.salePrice,
                     sale_discount_percent: productData.saleDiscountPercent,
                     // sale_discount_amount removed from UI
+                    sales_discounts: productData.salesDiscounts || {},
                     created_by: userId,
                     updated_at: new Date().toISOString()
                 })
@@ -101,6 +103,7 @@ export const productService = {
                     sale_price: productData.salePrice,
                     sale_discount_percent: productData.saleDiscountPercent,
                     // sale_discount_amount removed
+                    sales_discounts: productData.salesDiscounts || {},
                     updated_at: productData.updatedAt || new Date().toISOString()
                 })
                 .eq('id', id);

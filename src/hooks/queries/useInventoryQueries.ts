@@ -4,6 +4,7 @@ import { brandService } from '../../services/brandService';
 import { productService } from '../../services/productService';
 import { saleEntryService } from '../../services/saleEntryService';
 import { categoryService } from '../../services/categoryService';
+import { discountTypeService } from '../../services/discountTypeService';
 import { useUserRole } from '../useUserRole';
 import { Product, SaleEntry } from '../../types/inventory';
 
@@ -13,6 +14,7 @@ export const inventoryKeys = {
     categories: () => [...inventoryKeys.all, 'categories'] as const,
     products: () => [...inventoryKeys.all, 'products'] as const,
     sales: () => [...inventoryKeys.all, 'sales'] as const,
+    discountTypes: () => [...inventoryKeys.all, 'discount-types'] as const,
     brandList: (filterId?: string) => [...inventoryKeys.brands(), { filterId }] as const,
     categoryList: (brandId?: string) => [...inventoryKeys.categories(), { brandId }] as const,
     productList: (filterId?: string) => [...inventoryKeys.products(), { filterId }] as const,
@@ -224,6 +226,8 @@ export const useAddSaleEntryMutation = () => {
     });
 };
 
+
+
 export const useDeleteSaleEntryMutation = () => {
     const queryClient = useQueryClient();
     const { getToken } = useAuth();
@@ -240,3 +244,62 @@ export const useDeleteSaleEntryMutation = () => {
         },
     });
 };
+
+export const useDiscountTypesQuery = () => {
+    const { getToken } = useAuth();
+
+    return useQuery({
+        queryKey: inventoryKeys.discountTypes(),
+        queryFn: async () => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return discountTypeService.getDiscountTypes(token);
+        },
+    });
+};
+
+export const useAddDiscountTypeMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+    const { user } = useUserRole();
+
+    return useMutation({
+        mutationFn: async (name: string) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return discountTypeService.createDiscountType(name, user?.id, token);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.discountTypes() });
+        },
+    });
+};
+
+export const useUpdateDiscountTypeMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+
+    return useMutation({
+        mutationFn: async ({ id, name }: { id: string, name: string }) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return discountTypeService.updateDiscountType(id, name, token);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.discountTypes() });
+        },
+    });
+};
+
+export const useDeleteDiscountTypeMutation = () => {
+    const queryClient = useQueryClient();
+    const { getToken } = useAuth();
+
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const token = await getToken({ template: 'supabase' }) || undefined;
+            return discountTypeService.deleteDiscountType(id, token);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: inventoryKeys.discountTypes() });
+        },
+    });
+};
+
