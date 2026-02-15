@@ -29,6 +29,7 @@ export type Product = {
   quantityAvailable: number;
   arrivalDate: string;
   mrp: number;
+  purchaseRate: number;
   purchaseDiscountPercent: number;
   purchaseDiscountedPrice: number;
   salePrice: number;

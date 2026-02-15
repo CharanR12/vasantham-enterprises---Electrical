@@ -243,46 +243,54 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
               {/* STEP 2: PRICING INFO */}
               <div className={step === 2 ? 'space-y-6 animate-in fade-in slide-in-from-right-4 duration-300' : 'hidden'}>
 
-                <div className="space-y-4">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Purchase Details</h3>
+                {/* 1. MRP Info */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">MRP Info</h3>
+                  <div>
+                    <Label htmlFor="mrp" className="text-sm font-medium text-slate-700">MRP <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="mrp"
+                      type="number"
+                      name="mrp"
+                      value={formData.mrp}
+                      onChange={handleChange}
+                      className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 mt-1.5"
+                      placeholder="Enter MRP"
+                      disabled={formLoading || deleteLoading}
+                    />
+                  </div>
+                </div>
 
+                {/* 2. Purchase Info */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider">Purchase Info</h3>
                   {canViewPurchaseInfo ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="mrp" className="text-sm font-medium text-slate-700">MRP</Label>
-                        <Input
-                          id="mrp"
-                          type="number"
-                          name="mrp"
-                          value={formData.mrp}
-                          onChange={handleChange}
-                          className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
-                          disabled={formLoading || deleteLoading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="purchaseDiscountPercent" className="text-sm font-medium text-slate-700">Purchase Discount %</Label>
-                        <Input
-                          id="purchaseDiscountPercent"
-                          type="number"
-                          name="purchaseDiscountPercent"
-                          value={formData.purchaseDiscountPercent}
-                          onChange={handleChange}
-                          className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
-                          disabled={formLoading || deleteLoading}
-                        />
-                      </div>
-                      <div className="space-y-2 sm:col-span-2">
-                        <Label htmlFor="purchaseDiscountedPrice" className="text-sm font-medium text-slate-700">Purchase Rate (Net)</Label>
-                        <Input
-                          id="purchaseDiscountedPrice"
-                          type="number"
-                          name="purchaseDiscountedPrice"
-                          value={formData.purchaseDiscountedPrice}
-                          onChange={handleChange}
-                          className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 font-bold text-slate-900"
-                          disabled={formLoading || deleteLoading}
-                        />
+                    <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-xl space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="purchaseDiscountPercent" className="text-sm font-medium text-slate-700">Purchase Discount %</Label>
+                          <Input
+                            id="purchaseDiscountPercent"
+                            type="number"
+                            name="purchaseDiscountPercent"
+                            value={formData.purchaseDiscountPercent}
+                            onChange={handleChange}
+                            className="h-11 bg-white border-blue-200 rounded-xl focus-visible:ring-blue-500/20"
+                            disabled={formLoading || deleteLoading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="purchaseDiscountedPrice" className="text-sm font-medium text-slate-700">Net Purchase Rate</Label>
+                          <Input
+                            id="purchaseDiscountedPrice"
+                            type="number"
+                            name="purchaseDiscountedPrice"
+                            value={formData.purchaseDiscountedPrice}
+                            onChange={handleChange}
+                            className="h-11 bg-white border-blue-200 rounded-xl focus-visible:ring-blue-500/20 font-bold text-slate-900"
+                            disabled={formLoading || deleteLoading}
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -297,166 +305,163 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
                   )}
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sales Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-slate-700">MRP</Label>
-                      <Input
-                        value={formData.mrp}
-                        disabled
-                        className="h-11 bg-slate-50 border-slate-200 rounded-xl text-slate-500 font-medium"
-                      />
-                    </div>
-                    {/* Default Discount Input */}
-                    <div className="space-y-2">
-                      <Label htmlFor="saleDiscountPercent" className="text-sm font-medium text-slate-700">Default Discount %</Label>
-                      <Input
-                        id="saleDiscountPercent"
-                        type="number"
-                        name="saleDiscountPercent"
-                        value={formData.saleDiscountPercent}
-                        onChange={handleChange}
-                        className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20"
-                        placeholder="0%"
-                        min="0"
-                        max="100"
-                        step="0.1"
-                        disabled={formLoading || deleteLoading}
-                      />
-                    </div>
-
-                    {/* Sales Rate (Net) - MOVED HERE */}
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="salePrice" className="text-sm font-medium text-slate-700">Sales Rate (Net)</Label>
-                      <Input
-                        id="salePrice"
-                        type="number"
-                        name="salePrice"
-                        value={formData.salePrice}
-                        onChange={handleChange}
-                        className="h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 font-bold text-emerald-600"
-                        disabled={formLoading || deleteLoading}
-                      />
-                      {/* Profit Tag */}
-                      {(() => {
-                        const salePrice = Number(formData.salePrice) || 0;
-                        const purchasePrice = Number(formData.purchaseDiscountedPrice) || 0;
-                        const profit = salePrice - purchasePrice;
-                        const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100).toFixed(1) : 0;
-
-                        if (salePrice > 0 && purchasePrice > 0 && canViewPurchaseInfo) {
-                          return (
-                            <div className={`mt-2 text-xs font-semibold px-2 py-1 rounded-lg inline-block ${profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                              {profit >= 0 ? '+' : ''}₹{profit.toFixed(2)} ({profitMargin}%) Margin
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-
-                    {discountTypes.length > 0 && (
-                      <div className="space-y-3 sm:col-span-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium text-slate-700">Additional Sales Discounts</Label>
-                          {/* Only show Add button if there are unused discount types */}
-                          {discountTypes.filter(dt => !(formData.salesDiscounts && dt.id in formData.salesDiscounts)).length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const unused = discountTypes.find(dt => !(formData.salesDiscounts && dt.id in formData.salesDiscounts));
-                                if (unused) handleDiscountChange(unused.id, '0');
-                              }}
-                              disabled={formLoading || deleteLoading}
-                              className="flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 px-2 py-1 rounded-lg hover:bg-brand-50 transition-colors"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              Add Discount
-                            </button>
-                          )}
-                        </div>
-                        {/* Render rows for each selected discount */}
-                        {formData.salesDiscounts && Object.keys(formData.salesDiscounts).length > 0 ? (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">
-                              <div className="col-span-4">Type</div>
-                              <div className="col-span-3">Discount %</div>
-                              <div className="col-span-4">Sales Price</div>
-                              <div className="col-span-1"></div>
-                            </div>
-                            {Object.entries(formData.salesDiscounts).map(([dtId, pct]) => {
-                              const usedIds = Object.keys(formData.salesDiscounts || {});
-                              const availableTypes = discountTypes.filter(dt => dt.id === dtId || !usedIds.includes(dt.id));
-
-                              const mrp = Number(formData.mrp) || 0;
-                              const currentPrice = mrp > 0 ? (mrp * (1 - pct / 100)).toFixed(2) : '';
-
-                              return (
-                                <div key={dtId} className="grid grid-cols-12 gap-2 items-center">
-                                  <div className="col-span-4">
-                                    <select
-                                      value={dtId}
-                                      onChange={(e) => {
-                                        const newId = e.target.value;
-                                        if (newId !== dtId) {
-                                          handleRemoveDiscount(dtId);
-                                          handleDiscountChange(newId, String(pct));
-                                        }
-                                      }}
-                                      disabled={formLoading || deleteLoading}
-                                      className="w-full h-10 px-2 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all font-medium"
-                                    >
-                                      {availableTypes.map(dt => (
-                                        <option key={dt.id} value={dt.id}>{dt.name}</option>
-                                      ))}
-                                    </select>
-                                  </div>
-                                  <div className="col-span-3">
-                                    <Input
-                                      type="number"
-                                      value={pct}
-                                      onChange={(e) => handleDiscountChange(dtId, e.target.value)}
-                                      className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 text-center"
-                                      placeholder="0%"
-                                      min="0"
-                                      max="100"
-                                      step="0.1"
-                                      disabled={formLoading || deleteLoading}
-                                    />
-                                  </div>
-                                  <div className="col-span-4">
-                                    <Input
-                                      type="number"
-                                      value={currentPrice}
-                                      onChange={(e) => handleDiscountPriceChange(dtId, e.target.value)}
-                                      className="h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 font-bold text-slate-700"
-                                      placeholder="Price"
-                                      min="0"
-                                      disabled={formLoading || deleteLoading || !mrp}
-                                    />
-                                  </div>
-                                  <div className="col-span-1 flex justify-end">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRemoveDiscount(dtId)}
-                                      disabled={formLoading || deleteLoading}
-                                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-400 italic">No discounts added. Click "Add Discount" to get started.</p>
-                        )}
+                {/* 3. Sales Info */}
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold text-emerald-500 uppercase tracking-wider">Sales Info</h3>
+                  <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="saleDiscountPercent" className="text-sm font-medium text-slate-700">Default Discount %</Label>
+                        <Input
+                          id="saleDiscountPercent"
+                          type="number"
+                          name="saleDiscountPercent"
+                          value={formData.saleDiscountPercent}
+                          onChange={handleChange}
+                          className="h-11 bg-white border-emerald-200 rounded-xl focus-visible:ring-emerald-500/20"
+                          placeholder="0%"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          disabled={formLoading || deleteLoading}
+                        />
                       </div>
-                    )}
+                      <div className="space-y-2">
+                        <Label htmlFor="salePrice" className="text-sm font-medium text-slate-700">Net Sales Rate</Label>
+                        <Input
+                          id="salePrice"
+                          type="number"
+                          name="salePrice"
+                          value={formData.salePrice}
+                          onChange={handleChange}
+                          className="h-11 bg-white border-emerald-200 rounded-xl focus-visible:ring-emerald-500/20 font-bold text-emerald-700"
+                          disabled={formLoading || deleteLoading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Profit Tag */}
+                    {(() => {
+                      const salePrice = Number(formData.salePrice) || 0;
+                      const purchasePrice = Number(formData.purchaseDiscountedPrice) || 0;
+                      const profit = salePrice - purchasePrice;
+                      const profitMargin = salePrice > 0 ? ((profit / salePrice) * 100).toFixed(1) : 0;
+
+                      if (salePrice > 0 && purchasePrice > 0 && canViewPurchaseInfo) {
+                        return (
+                          <div className={`text-xs font-semibold px-3 py-2 rounded-lg inline-flex items-center gap-2 ${profit >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                            <span>{profit >= 0 ? 'Profit:' : 'Loss:'}</span>
+                            <span>{profit >= 0 ? '+' : ''}₹{profit.toFixed(2)} ({profitMargin}%)</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
+
+                {/* 4. Additional Discounts */}
+                {discountTypes.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-amber-500 uppercase tracking-wider">Additional Discounts</h3>
+
+                      {discountTypes.filter(dt => !(formData.salesDiscounts && dt.id in formData.salesDiscounts)).length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const unused = discountTypes.find(dt => !(formData.salesDiscounts && dt.id in formData.salesDiscounts));
+                            if (unused) handleDiscountChange(unused.id, '0');
+                          }}
+                          disabled={formLoading || deleteLoading}
+                          className="flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 px-2 py-1 rounded-lg hover:bg-brand-50 transition-colors"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add Discount
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-xl space-y-3">
+                      {formData.salesDiscounts && Object.keys(formData.salesDiscounts).length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">
+                            <div className="col-span-4">Type</div>
+                            <div className="col-span-3">Discount %</div>
+                            <div className="col-span-4">Net Price</div>
+                            <div className="col-span-1"></div>
+                          </div>
+                          {Object.entries(formData.salesDiscounts).map(([dtId, pct]) => {
+                            const usedIds = Object.keys(formData.salesDiscounts || {});
+                            const availableTypes = discountTypes.filter(dt => dt.id === dtId || !usedIds.includes(dt.id));
+
+                            const mrp = Number(formData.mrp) || 0;
+                            const currentPrice = mrp > 0 ? (mrp * (1 - pct / 100)).toFixed(2) : '';
+
+                            return (
+                              <div key={dtId} className="grid grid-cols-12 gap-2 items-center">
+                                <div className="col-span-4">
+                                  <select
+                                    value={dtId}
+                                    onChange={(e) => {
+                                      const newId = e.target.value;
+                                      if (newId !== dtId) {
+                                        handleRemoveDiscount(dtId);
+                                        handleDiscountChange(newId, String(pct));
+                                      }
+                                    }}
+                                    disabled={formLoading || deleteLoading}
+                                    className="w-full h-10 px-2 text-sm bg-white border border-amber-200 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all font-medium"
+                                  >
+                                    {availableTypes.map(dt => (
+                                      <option key={dt.id} value={dt.id}>{dt.name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="col-span-3">
+                                  <Input
+                                    type="number"
+                                    value={pct}
+                                    onChange={(e) => handleDiscountChange(dtId, e.target.value)}
+                                    className="h-10 bg-white border-amber-200 rounded-xl focus-visible:ring-amber-500/20 text-center"
+                                    placeholder="0%"
+                                    min="0"
+                                    max="100"
+                                    step="0.1"
+                                    disabled={formLoading || deleteLoading}
+                                  />
+                                </div>
+                                <div className="col-span-4">
+                                  <Input
+                                    type="number"
+                                    value={currentPrice}
+                                    onChange={(e) => handleDiscountPriceChange(dtId, e.target.value)}
+                                    className="h-10 bg-white border-amber-200 rounded-xl focus-visible:ring-amber-500/20 font-bold text-amber-900"
+                                    placeholder="Price"
+                                    min="0"
+                                    disabled={formLoading || deleteLoading || !mrp}
+                                  />
+                                </div>
+                                <div className="col-span-1 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveDiscount(dtId)}
+                                    disabled={formLoading || deleteLoading}
+                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic text-center py-2">No additional discounts added.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </form>
           </div>

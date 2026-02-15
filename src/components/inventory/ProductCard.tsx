@@ -5,12 +5,8 @@ import { format, parseISO } from 'date-fns';
 import ProductForm from './ProductForm';
 import SaleEntryForm from './SaleEntryForm';
 import SalesLogModal from './SalesLogModal';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import PriceDetailsDialog from './PriceDetailsDialog';
+
 
 type ProductCardProps = {
   product: Product;
@@ -212,80 +208,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
       {/* Price Details Modal */}
       {showPriceDetails && (
-        <Dialog open={showPriceDetails} onOpenChange={(open) => !open && setShowPriceDetails(false)}>
-          <DialogContent className="max-w-sm rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold flex items-center">
-                <IndianRupee className="h-5 w-5 mr-2 text-emerald-600" />
-                Price Details
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 mt-2">
-              <div className="text-center mb-4">
-                <h3 className="font-bold text-slate-900">{product.productName}</h3>
-                <p className="text-sm text-slate-500">{product.brand.name}</p>
-              </div>
-
-              {hasPriceData ? (
-                <div className="space-y-3">
-                  <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Purchase Info</h4>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 text-sm">MRP</span>
-                      <span className="font-bold text-slate-900">{formatPrice(product.mrp)}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-slate-600 text-sm">Purchase Rate</span>
-                      <span className="font-bold text-slate-900">{formatPrice(product.purchaseRate)}</span>
-                    </div>
-                    {product.purchaseDiscountPercent > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-600 text-sm">Discount</span>
-                        <span className="font-bold text-emerald-600">{product.purchaseDiscountPercent}%</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center pt-2 border-t border-slate-200">
-                      <span className="text-slate-600 text-sm font-medium">Discounted Price</span>
-                      <span className="font-bold text-lg text-slate-900">{formatPrice(product.purchaseDiscountedPrice)}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-emerald-50 rounded-xl p-4 space-y-3">
-                    <h4 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Sale Info</h4>
-                    <div className="flex justify-between items-center">
-                      <span className="text-emerald-700 text-sm">Sale Price</span>
-                      <span className="font-bold text-lg text-emerald-700">{formatPrice(product.salePrice)}</span>
-                    </div>
-                    {product.saleDiscountPercent > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-emerald-700 text-sm">Discount</span>
-                        <span className="font-bold text-emerald-600">{product.saleDiscountPercent}%</span>
-                      </div>
-                    )}
-                    {product.saleDiscountAmount > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-emerald-700 text-sm">Discount Amount</span>
-                        <span className="font-bold text-emerald-600">{formatPrice(product.saleDiscountAmount)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <IndianRupee className="h-12 w-12 text-slate-200 mx-auto mb-3" />
-                  <p className="text-slate-500 text-sm">No pricing details available.</p>
-                  <button
-                    onClick={() => { setShowPriceDetails(false); setShowEditForm(true); }}
-                    className="mt-3 text-brand-600 font-bold text-sm hover:underline"
-                  >
-                    Add pricing info
-                  </button>
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        <PriceDetailsDialog
+          open={showPriceDetails}
+          onOpenChange={(open) => !open && setShowPriceDetails(false)}
+          product={product}
+          onAddPricing={() => { setShowPriceDetails(false); setShowEditForm(true); }}
+        />
       )}
     </>
   );
