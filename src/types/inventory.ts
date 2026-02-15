@@ -51,6 +51,7 @@ export type SaleEntry = {
   billNumber?: string;
   quantitySold: number;
   createdAt: string;
+  branch?: string;
 };
 
 export type InvoiceItem = {

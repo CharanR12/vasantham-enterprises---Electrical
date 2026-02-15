@@ -122,22 +122,28 @@ export const CustomerBasicDetails: React.FC<CustomerBasicDetailsProps> = ({
 
                 <div className="space-y-2.5">
                     <Label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em] ml-1">Sales Person</Label>
-                    <Select
-                        value={formData.salesPerson.id}
-                        onValueChange={handleSalesPersonChange}
-                        disabled={disabled || (isSolarRestricted && displayedSalesPersons.length > 0)} // Disable if Solar restricted AND valid option exists
-                    >
-                        <SelectTrigger className={`h-12 bg-slate-50 border-slate-200/60 rounded-xl focus:ring-brand-500/20 focus:border-brand-500 text-slate-700 font-medium ${errors.salesPerson ? 'border-red-500 bg-red-50/30' : ''}`}>
-                            <SelectValue placeholder="Executive" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-slate-200 shadow-xl overflow-hidden">
-                            {displayedSalesPersons.map((person) => (
-                                <SelectItem key={person.id} value={person.id} className="py-3 focus:bg-brand-50">
-                                    {person.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    {isSolarRestricted ? (
+                        <div className="h-12 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center px-3 text-slate-500 font-medium">
+                            Solar Representative
+                        </div>
+                    ) : (
+                        <Select
+                            value={formData.salesPerson.id}
+                            onValueChange={handleSalesPersonChange}
+                            disabled={disabled}
+                        >
+                            <SelectTrigger className={`h-12 bg-slate-50 border-slate-200/60 rounded-xl focus:ring-brand-500/20 focus:border-brand-500 text-slate-700 font-medium ${errors.salesPerson ? 'border-red-500 bg-red-50/30' : ''}`}>
+                                <SelectValue placeholder="Executive" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl border-slate-200 shadow-xl overflow-hidden">
+                                {displayedSalesPersons.map((person) => (
+                                    <SelectItem key={person.id} value={person.id} className="py-3 focus:bg-brand-50">
+                                        {person.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
                     {errors.salesPerson && <p className="text-red-500 text-[10px] font-bold uppercase tracking-wider ml-1 mt-1">{errors.salesPerson}</p>}
                 </div>
             </div>

@@ -1,5 +1,7 @@
 import React from 'react';
 import { Search, Calendar as CalendarIcon, Plus, X } from 'lucide-react';
+import { useUserRole } from '../hooks/useUserRole';
+import { useBranch } from '../contexts/BranchContext';
 import { SalesPerson } from '../types';
 import { useReferralSourcesQuery } from '../hooks/queries/useReferralSourceQueries';
 import { Input } from '@/components/ui/input';
@@ -52,6 +54,10 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
   onClear,
 }) => {
   const { data: referralSources = [] } = useReferralSourcesQuery();
+  const { currentRole } = useUserRole();
+  const { currentBranch } = useBranch();
+
+  const isSalesPersonFilterVisible = !(currentRole === 'solar_user' && currentBranch === 'Solar');
 
   const salesPersonOptions = [
     { value: 'null', label: 'All Sales Persons' },
@@ -63,17 +69,15 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     { value: 'Not yet contacted', label: 'Not yet contacted' },
     { value: 'Scheduled next follow-up', label: 'Scheduled next follow-up' },
     { value: 'Sales completed', label: 'Sales completed' },
-    { value: 'Sales rejected', label: 'Sales rejected' },
+    { value: 'Sales rejected', label: 'Sales rejected' }
   ];
 
   const amountStatusOptions = [
-    { value: 'all', label: 'All Amount Status' },
-    { value: 'received', label: 'Amount Received' },
-    { value: 'not-received', label: 'Amount Not Received' },
+    { value: 'received', label: 'Payment Received' },
+    { value: 'not-received', label: 'Payment Pending' }
   ];
 
   const hasActiveFilters =
-    searchTerm !== '' ||
     salesPerson.length > 0 ||
     followUpStatus.length > 0 ||
     referralSource.length > 0 ||
@@ -82,10 +86,9 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
     creationFilter !== 'all';
 
   return (
-    <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-4 border border-slate-200/50 shadow-sm transition-all duration-300">
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-3">
-          {/* Basic Filters */}
+    <div className="bg-white/50 backdrop-blur-sm rounded-2xl p-3 border border-slate-200/50 shadow-sm transition-all duration-300 animate-in fade-in slide-in-from-top-4 duration-500">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-3 items-start">
           <div className="relative w-full sm:w-64">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none z-10">
               <Search className="h-4 w-4 text-slate-400" />
@@ -93,19 +96,21 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
             <Input
               placeholder="Search customers..."
               value={searchTerm}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500 font-medium"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-10 bg-white border-slate-200 rounded-xl focus-visible:ring-brand-500/20 focus-visible:border-brand-500"
             />
           </div>
 
-          <MultiSelectCombobox
-            options={salesPersonOptions}
-            selectedValues={salesPerson}
-            onChange={setSalesPerson}
-            placeholder="Filter Sales Persons"
-            searchPlaceholder="Search sales person..."
-            className="w-full sm:w-64"
-          />
+          {isSalesPersonFilterVisible && (
+            <MultiSelectCombobox
+              options={salesPersonOptions}
+              selectedValues={salesPerson}
+              onChange={setSalesPerson}
+              placeholder="Filter Sales Persons"
+              searchPlaceholder="Search sales person..."
+              className="w-full sm:w-64"
+            />
+          )}
 
           <MultiSelectCombobox
             options={statusOptions}
@@ -137,7 +142,6 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
             className="w-full sm:w-64"
           />
 
-          {/* Date Filtering Options */}
           <DateFilter
             label="Follow-up Date"
             icon={<CalendarIcon className="h-3.5 w-3.5" />}
@@ -161,7 +165,7 @@ const SearchFilter: React.FC<SearchFilterProps> = ({
           {hasActiveFilters && (
             <button
               onClick={onClear}
-              className="h-10 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              className="h-10 px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
             >
               <X className="h-4 w-4" />
               Clear

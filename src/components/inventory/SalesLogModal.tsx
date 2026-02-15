@@ -120,7 +120,7 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
                           {entry.quantitySold} units
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {currentRole === 'admin' && (
+                          {(currentRole === 'admin' || (currentRole === 'solar_user' && entry.branch === 'Solar')) && (
                             <button
                               onClick={() => handleDelete(entry.id)}
                               className="text-red-600 hover:text-red-900 transition-colors p-1"
@@ -164,7 +164,7 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
 
                     </div>
 
-                    {currentRole === 'admin' && (
+                    {(currentRole === 'admin' || (currentRole === 'solar_user' && entry.branch === 'Solar')) && (
                       <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
                         <button
                           onClick={() => handleDelete(entry.id)}

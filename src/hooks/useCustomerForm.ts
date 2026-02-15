@@ -38,23 +38,20 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
     const [formData, setFormData] = useState<Customer | Omit<Customer, 'id' | 'createdAt'>>(customer || initialState);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    // Auto-select "Solar Branch" sales person if in Solar branch
+    // Auto-select "Solar Representative" if in Solar branch
     useEffect(() => {
         if (currentBranch === 'Solar') {
             const solarPerson = salesPersons.find(sp =>
-                sp.name.toLowerCase().includes('solar') ||
-                sp.name.toLowerCase().includes('branch') // Fallback if name is just "Branch"? Safest is "Solar"
+                (sp.branch === 'Solar') || // Best check if branch column exists on type
+                sp.name.toLowerCase().includes('solar') || // Fallback
+                sp.name.toLowerCase().includes('branch')
             );
 
-            if (solarPerson && (!customer || formData.salesPerson.id !== solarPerson.id)) {
-                // If it's a new customer OR we want to enforce it for existing ones too (usually good to enforce)
-                // But be careful not to overwrite valid data if they view an old record from another branch? 
-                // Ah, data is already segregated by branch. So an existing Solar customer should already have Solar sales person.
-                // If they don't, we update it in form state (user still needs to save).
+            if (solarPerson && formData.salesPerson.id !== solarPerson.id) {
                 setFormData(prev => ({ ...prev, salesPerson: solarPerson }));
             }
         }
-    }, [currentBranch, salesPersons, customer]);
+    }, [currentBranch, salesPersons, formData.salesPerson.id]);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};

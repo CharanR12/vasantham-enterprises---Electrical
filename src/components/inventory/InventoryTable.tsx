@@ -158,13 +158,15 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ products, onEdit, onVie
         pinned: 'right',
         cellRenderer: (params: any) => (
           <div className="flex items-center gap-1">
-            <button
-              onClick={() => onEdit(params.data)}
-              className="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
-              title="Edit Product"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
+            {currentRole !== 'solar_user' && (
+              <button
+                onClick={() => onEdit(params.data)}
+                className="p-1.5 text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
+                title="Edit Product"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
             <button
               onClick={() => onViewLog(params.data)}
               className="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-lg transition-colors"

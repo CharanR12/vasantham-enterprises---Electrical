@@ -1,6 +1,8 @@
 export type SalesPerson = {
   id: string;
   name: string;
+  department?: string;
+  branch?: string;
 };
 
 // export type ReferralSource = string; // Deprecating simple string type if possible, or keeping for backward compat but adding Entity type
@@ -35,6 +37,7 @@ export type Customer = {
   followUps: FollowUp[];
   lastContactedDate?: string;
   createdAt: string;
+  branch?: string;
 };
 
 export type User = {

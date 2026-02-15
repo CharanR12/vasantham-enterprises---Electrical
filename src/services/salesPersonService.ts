@@ -2,14 +2,16 @@ import { getClient, handleSupabaseError } from './apiUtils';
 import { SalesPerson } from '../types';
 
 export const salesPersonService = {
-    getSalesPersons: async (clerkToken?: string): Promise<SalesPerson[]> => {
+    getSalesPersons: async (clerkToken?: string, branch?: string): Promise<SalesPerson[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
                 .from('sales_persons')
                 .select('*');
 
-
+            if (branch) {
+                query = query.eq('branch', branch);
+            }
 
             const { data, error } = await query
                 .order('name');

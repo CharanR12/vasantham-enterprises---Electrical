@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Product, SaleEntry } from '../../types/inventory';
 import { Package, Calendar, Hash, TrendingDown, Plus, Eye, Edit, IndianRupee } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { useUserRole } from '../../hooks/useUserRole';
 import ProductForm from './ProductForm';
 import SaleEntryForm from './SaleEntryForm';
 import SalesLogModal from './SalesLogModal';
@@ -29,6 +30,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const [showSaleForm, setShowSaleForm] = useState(false);
   const [showSalesLog, setShowSalesLog] = useState(false);
   const [showPriceDetails, setShowPriceDetails] = useState(false);
+  const { currentRole } = useUserRole();
 
   const formatDate = (dateString: string): string => {
     try {
@@ -87,7 +89,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
               <h3 className="text-xl font-bold text-slate-900 group-hover:text-brand-600 transition-colors duration-300">{product.productName}</h3>
               <p className="text-sm font-semibold text-slate-400 mt-0.5">{product.brand.name}</p>
             </div>
-            {!isSelectMode && (
+            {!isSelectMode && currentRole !== 'solar_user' && (
               <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowEditForm(true); }}

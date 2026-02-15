@@ -42,12 +42,13 @@ export const useCustomersQuery = () => {
 export const useSalesPersonsQuery = () => {
     const { getToken } = useAuth();
     const { currentRole } = useUserRole();
+    const { currentBranch } = useBranch();
 
     return useQuery({
-        queryKey: salesPersonKeys.list(undefined),
+        queryKey: salesPersonKeys.list(currentBranch),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return salesPersonService.getSalesPersons(token);
+            return salesPersonService.getSalesPersons(token, currentBranch);
         },
         select: (data) => {
             if (currentRole !== 'admin') {

@@ -36,7 +36,8 @@ export const customerService = {
                     salesAmount: fu.sales_amount ? parseFloat(fu.sales_amount) : undefined,
                     amountReceived: fu.amount_received
                 })),
-                createdAt: customer.created_at.split('T')[0]
+                createdAt: customer.created_at.split('T')[0],
+                branch: customer.branch
             }));
         } catch (error) {
             console.error('Error fetching customers:', error);

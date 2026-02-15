@@ -24,7 +24,8 @@ export const saleEntryService = {
                 customerName: entry.customer_name,
                 billNumber: entry.bill_number || undefined,
                 quantitySold: entry.quantity_sold,
-                createdAt: entry.created_at.split('T')[0]
+                createdAt: entry.created_at.split('T')[0],
+                branch: entry.branch
             }));
         } catch (error) {
             console.error('Error fetching sale entries:', error);
@@ -79,7 +80,8 @@ export const saleEntryService = {
                 customerName: data.customer_name,
                 billNumber: data.bill_number || undefined,
                 quantitySold: data.quantity_sold,
-                createdAt: data.created_at.split('T')[0]
+                createdAt: data.created_at.split('T')[0],
+                branch: data.branch
             };
         } catch (error) {
             console.error('Error creating sale entry:', error);

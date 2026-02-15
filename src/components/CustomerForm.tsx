@@ -61,7 +61,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, salesPer
               <p className="text-slate-400 text-sm font-medium mt-1">Manage customer details</p>
             </DialogHeader>
             <div className="flex items-center gap-2">
-              {(customer && currentRole === 'admin') && (
+              {(customer && (currentRole === 'admin' || (currentRole === 'solar_user' && customer.branch === 'Solar'))) && (
                 <Button
                   variant="ghost"
                   onClick={() => setShowDeleteConfirm(true)}

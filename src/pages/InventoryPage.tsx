@@ -282,7 +282,7 @@ const InventoryPage: React.FC = () => {
       )}
 
       {/* Add Button - Only show when NOT in select mode */}
-      {!isSelectMode && (
+      {!isSelectMode && currentRole !== 'solar_user' && (
         <button
           onClick={() => setShowAddForm(true)}
           className="fixed bottom-8 right-8 z-40 bg-brand-600 text-white p-4 rounded-2xl shadow-xl shadow-brand-500/20 hover:bg-brand-700 hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center"
