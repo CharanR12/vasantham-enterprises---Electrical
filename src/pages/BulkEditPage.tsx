@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, AlertCircle, Check, Search } from 'lucide-react';
+import { ArrowLeft, Check, Search } from 'lucide-react';
 import { useProductsQuery, useBrandsQuery, useCategoriesQuery } from '../hooks/queries/useInventoryQueries';
+import { useUserRole } from '../hooks/useUserRole';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
 import { Input } from '@/components/ui/input';
 import { supabase } from '../lib/supabase';
@@ -11,10 +13,22 @@ import { toast } from 'sonner';
 const BulkEditPage: React.FC = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { currentRole, isLoaded } = useUserRole();
+
+    // Redirect if not admin
+    React.useEffect(() => {
+        if (isLoaded && currentRole !== 'admin') {
+            navigate('/inventory');
+        }
+    }, [isLoaded, currentRole, navigate]);
+
+    if (!isLoaded) {
+        return <LoadingSpinner />;
+    }
 
     const { data: products = [], isLoading: productsLoading } = useProductsQuery();
-    const { data: brands = [], isLoading: brandsLoading } = useBrandsQuery();
-    const { data: categories = [], isLoading: categoriesLoading } = useCategoriesQuery();
+    const { data: brands = [] } = useBrandsQuery();
+    const { data: categories = [] } = useCategoriesQuery();
 
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);

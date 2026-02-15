@@ -8,7 +8,7 @@ import { X, Save, Download, AlertCircle } from 'lucide-react';
 import InvoiceCustomerDetails from './InvoiceCustomerDetails';
 import InvoiceItemsTable from './InvoiceItemsTable';
 
-export interface InvoiceItemForm extends Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'> {
+export interface InvoiceItemForm extends Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt' | 'mrp' | 'salePrice' | 'discount' | 'quantity' | 'purchaseRate' | 'purchaseDiscountPercent' | 'purchaseDiscountedPrice' | 'saleDiscountPercent' | 'saleDiscountAmount'> {
     mrp: number | '';
     salePrice: number | '';
     discount: number | '';
@@ -38,6 +38,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts, invoice, 
 
     // Track which discount type is selected per item index
     const [itemDiscountTypes, setItemDiscountTypes] = useState<Record<number, string>>({});
+    const [globalDiscountType, setGlobalDiscountType] = useState<string>('');
 
     // Form state
     const [customerName, setCustomerName] = useState('');
@@ -143,6 +144,38 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts, invoice, 
         const calculatedSalePrice = mrp - (mrp * discountPercent / 100);
 
         updateItem(index, 'salePrice', Math.round(calculatedSalePrice * 100) / 100);
+    };
+
+    const handleGlobalDiscountTypeChange = (discountTypeId: string) => {
+        setGlobalDiscountType(discountTypeId);
+        if (!discountTypeId) return;
+
+        const newItemDiscountTypes: Record<number, string> = { ...itemDiscountTypes };
+
+        const newItems = items.map((item, index) => {
+            // Update tracking state for every item
+            newItemDiscountTypes[index] = discountTypeId;
+
+            const product = allProducts.find(p => p.id === item.productId);
+            // If product has this discount type defined, use it. Otherwise 0.
+            const discountPercent = product?.salesDiscounts?.[discountTypeId] ?? 0;
+
+            const mrp = typeof item.mrp === 'number' ? item.mrp : (parseFloat(String(item.mrp)) || 0);
+            const calculatedSalePrice = mrp - (mrp * discountPercent / 100);
+            const finalPrice = Math.round(calculatedSalePrice * 100) / 100;
+
+            const qty = typeof item.quantity === 'number' ? item.quantity : (parseFloat(String(item.quantity)) || 0);
+            const disc = typeof item.discount === 'number' ? item.discount : (parseFloat(String(item.discount)) || 0);
+
+            return {
+                ...item,
+                salePrice: finalPrice,
+                lineTotal: (finalPrice * qty) - disc
+            };
+        });
+
+        setItemDiscountTypes(newItemDiscountTypes);
+        setItems(newItems);
     };
 
     const removeItem = (index: number) => {
@@ -252,6 +285,19 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ selectedProducts, invoice, 
                             </div>
 
                             <div className="flex items-center justify-between w-full sm:w-auto gap-4 sm:gap-6">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Discount Type:</span>
+                                    <select
+                                        value={globalDiscountType}
+                                        onChange={(e) => handleGlobalDiscountTypeChange(e.target.value)}
+                                        className="text-sm font-bold px-2 sm:px-3 py-1.5 rounded-lg border border-slate-200 outline-none bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
+                                    >
+                                        <option value="">No Discount</option>
+                                        {discountTypes.map(dt => (
+                                            <option key={dt.id} value={dt.id}>{dt.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:inline">Status:</span>
                                     <select

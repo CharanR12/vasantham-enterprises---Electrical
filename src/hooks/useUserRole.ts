@@ -21,6 +21,7 @@ export const useUserRole = () => {
         user: currentUser,
         membership,
         currentRole,
-        filterId
+        filterId,
+        isLoaded: useUser().isLoaded && useOrganization().isLoaded
     };
 };

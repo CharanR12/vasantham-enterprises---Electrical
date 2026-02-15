@@ -4,7 +4,8 @@ import { Product, DiscountType, InvoiceItem } from '../../types/inventory';
 import { useUserRole } from '../../hooks/useUserRole';
 
 // Define Interface locally or import if exported (assuming inline definition in parent previously)
-interface InvoiceItemForm extends Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'> {
+// Interface for the local state within the modal
+interface InvoiceItemForm extends Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt' | 'mrp' | 'salePrice' | 'discount' | 'quantity' | 'purchaseRate' | 'purchaseDiscountPercent' | 'purchaseDiscountedPrice' | 'saleDiscountPercent' | 'saleDiscountAmount'> {
     mrp: number | '';
     salePrice: number | '';
     discount: number | '';
@@ -51,8 +52,8 @@ const InvoiceItemsTable: React.FC<InvoiceItemsTableProps> = ({
                             <th className="text-left text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-32">Discount Type</th>
                             <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-24">Sale Price</th>
                             <th className="text-center text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-20">Qty</th>
-                            <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-24">Disc</th>
-                            <th className="text-right text-xs font-bold text-slate-500 uppercase tracking-wider pb-3 w-28">Total</th>
+                            <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-[100px]">Additional Discount</th>
+                            <th className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider w-[120px]">Line Total</th>
                             <th className="w-10 pb-3"></th>
                         </tr>
                     </thead>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useProductsQuery, useBrandsQuery, useSalesEntriesQuery, useCategoriesQuery } from '../hooks/queries/useInventoryQueries';
+import { useUserRole } from '../hooks/useUserRole';
 import InventorySearchFilter from '../components/inventory/InventorySearchFilter';
 import InventoryKPICards from '../components/inventory/InventoryKPICards';
 import ProductCard from '../components/inventory/ProductCard';
@@ -20,6 +21,7 @@ const InventoryPage: React.FC = () => {
   const { data: brands = [], isLoading: brandsLoading } = useBrandsQuery();
   const { data: categories = [], isLoading: categoriesLoading } = useCategoriesQuery();
   const { data: salesEntries = [], isLoading: salesLoading, error: salesError } = useSalesEntriesQuery();
+  const { currentRole } = useUserRole();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -177,13 +179,15 @@ const InventoryPage: React.FC = () => {
         {/* Invoice Button */}
         {!isSelectMode && (
           <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/inventory/bulk-edit')}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-all text-xs sm:text-sm"
-            >
-              <FileText className="h-4 w-4" />
-              Bulk Edit
-            </button>
+            {currentRole === 'admin' && (
+              <button
+                onClick={() => navigate('/inventory/bulk-edit')}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-xl font-bold shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-all text-xs sm:text-sm"
+              >
+                <FileText className="h-4 w-4" />
+                Bulk Edit
+              </button>
+            )}
             <button
               onClick={() => {
                 setIsSelectMode(true);
