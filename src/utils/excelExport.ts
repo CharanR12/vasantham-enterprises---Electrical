@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
-import { Customer, SalesPerson } from '../types';
-import { Product, Brand, SaleEntry } from '../types/inventory';
+import { Customer, SalesPerson, ReferralSourceEntity } from '../types';
+import { Product, Brand, SaleEntry, Category, DiscountType, Invoice } from '../types/inventory';
 import { format, parseISO } from 'date-fns';
 
 export const exportToExcel = (
@@ -8,7 +8,11 @@ export const exportToExcel = (
   salesPersons: SalesPerson[],
   products: Product[],
   brands: Brand[],
-  salesEntries: SaleEntry[]
+  salesEntries: SaleEntry[],
+  categories: Category[],
+  referralSources: ReferralSourceEntity[],
+  discountTypes: DiscountType[],
+  invoices: Invoice[]
 ) => {
   // Create a new workbook
   const workbook = XLSX.utils.book_new();
@@ -39,8 +43,8 @@ export const exportToExcel = (
       'Remarks': customer.remarks,
       'Created Date': customer.createdAt,
       'Follow-ups Count': customer.followUps.length,
-      'Latest Follow-up Status': customer.followUps.length > 0 ? 
-        customer.followUps.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())[0].status : 
+      'Latest Follow-up Status': customer.followUps.length > 0 ?
+        customer.followUps.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime())[0].status :
         'No follow-ups',
       'Total Sales Amount': totalSalesAmount > 0 ? totalSalesAmount : 0,
       'Total Sales Amount (Formatted)': totalSalesAmount > 0 ? formatCurrency(totalSalesAmount) : '₹0'
@@ -82,14 +86,14 @@ export const exportToExcel = (
     const rejectedSales = personCustomers.filter(customer =>
       customer.followUps.some(followUp => followUp.status === 'Sales rejected')
     );
-    
+
     // Calculate revenue for this sales person
     const revenue = personCustomers.reduce((total, customer) => {
       return total + customer.followUps
         .filter(followUp => followUp.status === 'Sales completed' && followUp.salesAmount)
         .reduce((sum, followUp) => sum + (followUp.salesAmount || 0), 0);
     }, 0);
-    
+
     const conversionRate = personCustomers.length > 0 ? (completedSales.length / personCustomers.length * 100) : 0;
     const averageDealSize = completedSales.length > 0 ? revenue / completedSales.length : 0;
 
@@ -115,18 +119,37 @@ export const exportToExcel = (
   const productsData = products.map(product => {
     const productSales = salesEntries.filter(entry => entry.productId === product.id);
     const totalSold = productSales.reduce((sum, entry) => sum + entry.quantitySold, 0);
-    const stockStatus = product.quantityAvailable === 0 ? 'Out of Stock' : 
-                       product.quantityAvailable <= 5 ? 'Low Stock' : 'In Stock';
+    const stockStatus = product.quantityAvailable === 0 ? 'Out of Stock' :
+      product.quantityAvailable <= 5 ? 'Low Stock' : 'In Stock';
+    const category = categories.find(c => c.id === product.categoryId);
+
+    // Format sales discounts
+    const discounts = product.salesDiscounts
+      ? Object.entries(product.salesDiscounts)
+        .map(([dtId, pct]) => {
+          const dt = discountTypes.find(d => d.id === dtId);
+          return dt ? `${dt.name}: ${pct}%` : `${pct}%`;
+        })
+        .join(', ')
+      : '';
 
     return {
       'Product ID': product.id,
       'Brand': product.brand.name,
+      'Category': category?.name || '-',
       'Product Name': product.productName,
       'Model Number': product.modelNumber,
       'Quantity Available': product.quantityAvailable,
       'Total Sold': totalSold,
       'Stock Status': stockStatus,
       'Arrival Date': product.arrivalDate,
+      'MRP': product.mrp,
+      'Purchase Rate': product.purchaseRate,
+      'Purchase Discount %': product.purchaseDiscountPercent,
+      'Net Purchase Price': product.purchaseDiscountedPrice,
+      'Sale Price': product.salePrice,
+      'Sale Discount %': product.saleDiscountPercent,
+      'Additional Discounts': discounts,
       'Created Date': product.createdAt,
       'Sales Transactions': productSales.length
     };
@@ -138,7 +161,7 @@ export const exportToExcel = (
   // 5. Brands Sheet
   const brandsData = brands.map(brand => {
     const brandProducts = products.filter(p => p.brandId === brand.id);
-    const brandSales = salesEntries.filter(entry => 
+    const brandSales = salesEntries.filter(entry =>
       brandProducts.some(product => product.id === entry.productId)
     );
     const totalSold = brandSales.reduce((sum, entry) => sum + entry.quantitySold, 0);
@@ -158,7 +181,82 @@ export const exportToExcel = (
   const brandsSheet = XLSX.utils.json_to_sheet(brandsData);
   XLSX.utils.book_append_sheet(workbook, brandsSheet, 'Brands');
 
-  // 6. Sales Entries Sheet
+  // 6. Categories Sheet
+  const categoriesData = categories.map(category => {
+    const brand = brands.find(b => b.id === category.brandId);
+    return {
+      'Category ID': category.id,
+      'Category Name': category.name,
+      'Brand': brand?.name || 'Unknown',
+      'Created Date': category.createdAt
+    };
+  });
+
+  const categoriesSheet = XLSX.utils.json_to_sheet(categoriesData);
+  XLSX.utils.book_append_sheet(workbook, categoriesSheet, 'Categories');
+
+  // 7. Referral Sources Sheet
+  const referralSourcesData = referralSources.map(source => ({
+    'Source ID': source.id,
+    'Source Name': source.name,
+    'Used By Customers': customers.filter(c => c.referralSource === source.name).length,
+    'Created Date': source.createdAt
+  }));
+
+  const referralSourcesSheet = XLSX.utils.json_to_sheet(referralSourcesData);
+  XLSX.utils.book_append_sheet(workbook, referralSourcesSheet, 'Referral Sources');
+
+  // 8. Discount Types Sheet
+  const discountTypesData = discountTypes.map(dt => ({
+    'Discount Type ID': dt.id,
+    'Name': dt.name,
+    'Status': dt.isActive ? 'Active' : 'Inactive',
+    'Created Date': dt.createdAt
+  }));
+
+  const discountTypesSheet = XLSX.utils.json_to_sheet(discountTypesData);
+  XLSX.utils.book_append_sheet(workbook, discountTypesSheet, 'Discount Types');
+
+  // 9. Quotations (Invoices) Sheet
+  const invoicesData = invoices.map(invoice => ({
+    'Quotation ID': invoice.id,
+    'Quotation Number': invoice.invoiceNumber,
+    'Customer Name': invoice.customerName,
+    'Company Name': invoice.companyName,
+    'Status': invoice.status,
+    'Total Amount': invoice.totalAmount,
+    'Total Amount (Formatted)': formatCurrency(invoice.totalAmount),
+    'Items Count': invoice.items.length,
+    'Created Date': invoice.createdAt
+  }));
+
+  const invoicesSheet = XLSX.utils.json_to_sheet(invoicesData);
+  XLSX.utils.book_append_sheet(workbook, invoicesSheet, 'Quotations');
+
+  // 10. Quotation Items Sheet
+  const invoiceItemsData: any[] = [];
+  invoices.forEach(invoice => {
+    invoice.items.forEach(item => {
+      invoiceItemsData.push({
+        'Quotation Number': invoice.invoiceNumber,
+        'Product Name': item.productName,
+        'Brand': item.brandName,
+        'Model Number': item.modelNumber,
+        'Quantity': item.quantity,
+        'MRP': item.mrp,
+        'Sale Price': item.salePrice,
+        'Discount': item.discount, // Manual discount amount
+        'Line Total': item.lineTotal,
+        'Purchase Rate': item.purchaseRate,
+        'Net Purchase Price': item.purchaseDiscountedPrice
+      });
+    });
+  });
+
+  const invoiceItemsSheet = XLSX.utils.json_to_sheet(invoiceItemsData);
+  XLSX.utils.book_append_sheet(workbook, invoiceItemsSheet, 'Quotation Items');
+
+  // 11. Sales Entries Sheet
   const salesEntriesData = salesEntries.map(entry => {
     const product = products.find(p => p.id === entry.productId);
     return {
@@ -178,7 +276,7 @@ export const exportToExcel = (
   const salesEntriesSheet = XLSX.utils.json_to_sheet(salesEntriesData);
   XLSX.utils.book_append_sheet(workbook, salesEntriesSheet, 'Sales Entries');
 
-  // 7. Revenue Summary Sheet
+  // 12. Revenue Summary Sheet
   const totalRevenue = customers.reduce((total, customer) => {
     return total + customer.followUps
       .filter(followUp => followUp.status === 'Sales completed' && followUp.salesAmount)
@@ -186,7 +284,7 @@ export const exportToExcel = (
   }, 0);
 
   const completedSalesWithAmount = customers.reduce((total, customer) => {
-    return total + customer.followUps.filter(followUp => 
+    return total + customer.followUps.filter(followUp =>
       followUp.status === 'Sales completed' && followUp.salesAmount && followUp.salesAmount > 0
     ).length;
   }, 0);
@@ -223,7 +321,7 @@ export const exportToExcel = (
   const revenueSummarySheet = XLSX.utils.json_to_sheet(revenueSummaryData);
   XLSX.utils.book_append_sheet(workbook, revenueSummarySheet, 'Revenue Summary');
 
-  // 8. Summary Sheet (Updated with Revenue)
+  // 13. Summary Sheet (Updated with Revenue)
   const summaryData = [
     {
       'Metric': 'Total Customers',
@@ -266,6 +364,16 @@ export const exportToExcel = (
       'Description': 'Total number of brands'
     },
     {
+      'Metric': 'Total Categories',
+      'Value': categories.length,
+      'Description': 'Total number of categories'
+    },
+    {
+      'Metric': 'Total Quotations',
+      'Value': invoices.length,
+      'Description': 'Total number of quotations created'
+    },
+    {
       'Metric': 'Total Stock Units',
       'Value': products.reduce((sum, p) => sum + p.quantityAvailable, 0),
       'Description': 'Total quantity of all products in stock'
@@ -302,7 +410,7 @@ export const exportToExcel = (
 
   // Generate filename with current date
   const currentDate = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-  const filename = `Vasantham_Enterprises_Export_${currentDate}.xlsx`;
+  const filename = `Vasantham_Enterprises_All_Data_Export_${currentDate}.xlsx`;
 
   // Write the file
   XLSX.writeFile(workbook, filename);

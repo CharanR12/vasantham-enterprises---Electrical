@@ -159,7 +159,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExport }) => {
 
       {/* Actions */}
       <div className="p-3 border-t border-slate-100 space-y-1.5">
-        {onExport && (
+        {(onExport && currentRole === 'admin') && (
           <button
             onClick={() => {
               onExport();

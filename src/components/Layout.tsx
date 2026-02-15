@@ -1,5 +1,8 @@
 import React from 'react';
 import { useCustomersQuery, useSalesPersonsQuery } from '../hooks/queries/useCustomerQueries';
+import { useCategoriesQuery, useDiscountTypesQuery } from '../hooks/queries/useInventoryQueries';
+import { useReferralSourcesQuery } from '../hooks/queries/useReferralSourceQueries';
+import { useInvoices } from '../hooks/useInvoices';
 import { exportToExcel } from '../utils/excelExport';
 import Sidebar, { SidebarProvider, MobileMenuButton, useSidebar } from './Sidebar';
 
@@ -11,11 +14,25 @@ const LayoutContent: React.FC<LayoutProps> = ({ children }) => {
   const { isCollapsed } = useSidebar();
   const { data: customers = [] } = useCustomersQuery();
   const { data: salesPersons = [] } = useSalesPersonsQuery();
+  const { data: categories = [] } = useCategoriesQuery();
+  const { data: referralSources = [] } = useReferralSourcesQuery();
+  const { data: discountTypes = [] } = useDiscountTypesQuery();
+  const { invoices = [] } = useInvoices();
 
   const handleExportToExcel = async () => {
     try {
       const { products = [], brands = [], salesEntries = [] } = (window as any).inventoryData || {};
-      exportToExcel(customers, salesPersons, products, brands, salesEntries);
+      exportToExcel(
+        customers,
+        salesPersons,
+        products,
+        brands,
+        salesEntries,
+        categories,
+        referralSources,
+        discountTypes,
+        invoices
+      );
     } catch (error) {
       console.error('Export error:', error);
       alert('Failed to export data. Please try again.');

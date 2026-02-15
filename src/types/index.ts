@@ -3,7 +3,13 @@ export type SalesPerson = {
   name: string;
 };
 
+// export type ReferralSource = string; // Deprecating simple string type if possible, or keeping for backward compat but adding Entity type
 export type ReferralSource = string;
+export type ReferralSourceEntity = {
+  id: string;
+  name: string;
+  createdAt?: string;
+};
 
 export type FollowUpStatus = 'Not yet contacted' | 'Scheduled next follow-up' | 'Sales completed' | 'Sales rejected';
 
