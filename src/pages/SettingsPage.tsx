@@ -1,14 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package, Users, Share2, Tag } from 'lucide-react';
 import ErrorMessage from '../components/ErrorMessage';
 import { useSettings } from '../hooks/useSettings';
+import { useUserRole } from '../hooks/useUserRole';
 import { BrandManagement } from '../components/settings/BrandManagement';
 import { SalesForceManagement } from '../components/settings/SalesForceManagement';
 import { ReferralSourceManagement } from '../components/settings/ReferralSourceManagement';
 import { DiscountTypeManagement } from '../components/settings/DiscountTypeManagement';
 
 const SettingsPage: React.FC = () => {
+  const { currentRole } = useUserRole();
   const [activeTab, setActiveTab] = useState<'inventory' | 'sales' | 'referral' | 'discounts'>('inventory');
+
+  // Effect to set initial tab based on role
+  useEffect(() => {
+    if (currentRole === 'solar_user' && activeTab !== 'referral') {
+      setActiveTab('referral');
+    }
+  }, [currentRole]);
 
   const {
     brands,
@@ -82,6 +91,11 @@ const SettingsPage: React.FC = () => {
     handleCancel
   } = useSettings();
 
+  const showInventory = currentRole === 'admin';
+  const showSalesTeam = currentRole === 'admin';
+  const showDiscounts = currentRole === 'admin';
+  const showReferrals = true; // Accessible to everyone for now? Or maybe 'admin' and 'solar_user'?
+
   return (
     <div className="space-y-8 pb-12 animate-fadeIn">
       {/* Page Header */}
@@ -94,46 +108,54 @@ const SettingsPage: React.FC = () => {
         {/* Tab Navigation */}
         <div className="bg-slate-50/50 border-b border-slate-200/60 p-1 overflow-x-auto">
           <nav className="flex space-x-1 min-w-max">
-            <button
-              onClick={() => setActiveTab('inventory')}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'inventory'
-                ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                }`}
-            >
-              <Package className={`h-4 w-4 ${activeTab === 'inventory' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-wider text-xs sm:text-sm">Inventory</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('sales')}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'sales'
-                ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                }`}
-            >
-              <Users className={`h-4 w-4 ${activeTab === 'sales' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-wider text-xs sm:text-sm">Sales Team</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('referral')}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'referral'
-                ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                }`}
-            >
-              <Share2 className={`h-4 w-4 ${activeTab === 'referral' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-wider text-xs sm:text-sm">Referrals</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('discounts')}
-              className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'discounts'
-                ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
-                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                }`}
-            >
-              <Tag className={`h-4 w-4 ${activeTab === 'discounts' ? 'text-brand-500' : ''}`} />
-              <span className="uppercase tracking-wider text-xs sm:text-sm">Discounts</span>
-            </button>
+            {showInventory && (
+              <button
+                onClick={() => setActiveTab('inventory')}
+                className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'inventory'
+                  ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+              >
+                <Package className={`h-4 w-4 ${activeTab === 'inventory' ? 'text-brand-500' : ''}`} />
+                <span className="uppercase tracking-wider text-xs sm:text-sm">Inventory</span>
+              </button>
+            )}
+            {showSalesTeam && (
+              <button
+                onClick={() => setActiveTab('sales')}
+                className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'sales'
+                  ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+              >
+                <Users className={`h-4 w-4 ${activeTab === 'sales' ? 'text-brand-500' : ''}`} />
+                <span className="uppercase tracking-wider text-xs sm:text-sm">Sales Team</span>
+              </button>
+            )}
+            {showReferrals && (
+              <button
+                onClick={() => setActiveTab('referral')}
+                className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'referral'
+                  ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+              >
+                <Share2 className={`h-4 w-4 ${activeTab === 'referral' ? 'text-brand-500' : ''}`} />
+                <span className="uppercase tracking-wider text-xs sm:text-sm">Referrals</span>
+              </button>
+            )}
+            {showDiscounts && (
+              <button
+                onClick={() => setActiveTab('discounts')}
+                className={`flex-1 flex items-center justify-center space-x-2 py-3.5 px-6 rounded-xl text-sm font-black transition-all duration-300 ${activeTab === 'discounts'
+                  ? 'bg-white text-brand-600 shadow-sm border border-slate-200/50'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                  }`}
+              >
+                <Tag className={`h-4 w-4 ${activeTab === 'discounts' ? 'text-brand-500' : ''}`} />
+                <span className="uppercase tracking-wider text-xs sm:text-sm">Discounts</span>
+              </button>
+            )}
           </nav>
         </div>
 

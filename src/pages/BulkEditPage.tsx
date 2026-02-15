@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Search } from 'lucide-react';
-import { useProductsQuery, useBrandsQuery, useCategoriesQuery } from '../hooks/queries/useInventoryQueries';
+import { useProductsQuery, useBrandsQuery, useCategoriesQuery, useDiscountTypesQuery } from '../hooks/queries/useInventoryQueries';
 import { useUserRole } from '../hooks/useUserRole';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
@@ -9,6 +9,15 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+
+type TargetField = 'purchase' | 'sales' | 'additional';
 
 const BulkEditPage: React.FC = () => {
     const navigate = useNavigate();
@@ -29,6 +38,7 @@ const BulkEditPage: React.FC = () => {
     const { data: products = [], isLoading: productsLoading } = useProductsQuery();
     const { data: brands = [] } = useBrandsQuery();
     const { data: categories = [] } = useCategoriesQuery();
+    const { data: discountTypes = [] } = useDiscountTypesQuery();
 
     const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -36,6 +46,8 @@ const BulkEditPage: React.FC = () => {
     const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
     const [isUpdating, setIsUpdating] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [targetField, setTargetField] = useState<TargetField>('purchase');
+    const [selectedDiscountTypeId, setSelectedDiscountTypeId] = useState<string>('');
 
     const brandOptions = brands.map(b => ({ value: b.id, label: b.name }));
 
@@ -89,7 +101,16 @@ const BulkEditPage: React.FC = () => {
             return;
         }
 
-        if (!window.confirm(`Are you sure you want to update ${selectedProductIds.size} products with a ${newDiscount}% discount?`)) {
+        if (targetField === 'additional' && !selectedDiscountTypeId) {
+            toast.error('Please select a discount type');
+            return;
+        }
+
+        const fieldName = targetField === 'purchase' ? 'Purchase Discount' :
+            targetField === 'sales' ? 'Sales Discount' :
+                discountTypes.find(dt => dt.id === selectedDiscountTypeId)?.name || 'Additional Discount';
+
+        if (!window.confirm(`Are you sure you want to update ${selectedProductIds.size} products with a ${newDiscount}% ${fieldName}?`)) {
             return;
         }
 
@@ -99,15 +120,38 @@ const BulkEditPage: React.FC = () => {
                 const product = products.find(p => p.id === id);
                 if (!product) return null;
 
-                const purchaseDiscountedPrice = product.mrp - (product.mrp * newDiscount / 100);
-
-                return supabase
-                    .from('products')
-                    .update({
-                        purchase_discount_percent: newDiscount,
-                        purchase_discounted_price: purchaseDiscountedPrice
-                    })
-                    .eq('id', id);
+                if (targetField === 'purchase') {
+                    const purchaseDiscountedPrice = product.mrp - (product.mrp * newDiscount / 100);
+                    return supabase
+                        .from('products')
+                        .update({
+                            purchase_discount_percent: newDiscount,
+                            purchase_discounted_price: purchaseDiscountedPrice
+                        })
+                        .eq('id', id);
+                } else if (targetField === 'sales') {
+                    const salePrice = product.mrp - (product.mrp * newDiscount / 100);
+                    return supabase
+                        .from('products')
+                        .update({
+                            sale_discount_percent: newDiscount,
+                            sale_price: salePrice
+                        })
+                        .eq('id', id);
+                } else if (targetField === 'additional') {
+                    const currentDiscounts = product.salesDiscounts || {};
+                    const updatedDiscounts = {
+                        ...currentDiscounts,
+                        [selectedDiscountTypeId]: newDiscount
+                    };
+                    return supabase
+                        .from('products')
+                        .update({
+                            sales_discounts: updatedDiscounts
+                        })
+                        .eq('id', id);
+                }
+                return null;
             }).filter(Boolean);
 
             await Promise.all(updates);
@@ -127,6 +171,24 @@ const BulkEditPage: React.FC = () => {
 
     const isAllSelected = filteredProducts.length > 0 && selectedProductIds.size === filteredProducts.length;
 
+    // Helper to get current value for display
+    const getCurrentValue = (product: any) => {
+        if (targetField === 'purchase') return `${product.purchaseDiscountPercent}%`;
+        if (targetField === 'sales') return `${product.saleDiscountPercent}%`;
+        if (targetField === 'additional' && selectedDiscountTypeId) {
+            return `${product.salesDiscounts?.[selectedDiscountTypeId] || 0}%`;
+        }
+        return '-';
+    };
+
+    // Helper to get new price for display (only for purchase/sales)
+    const getNewPrice = (product: any) => {
+        if (!isValidDiscount) return null;
+        if (targetField === 'purchase') return product.mrp - (product.mrp * newDiscount / 100);
+        if (targetField === 'sales') return product.mrp - (product.mrp * newDiscount / 100);
+        return null; // Additional discount doesn't directly change base price columns shown here
+    };
+
     return (
         <div className="space-y-6 pb-24">
             {/* Header */}
@@ -139,7 +201,7 @@ const BulkEditPage: React.FC = () => {
                 </button>
                 <div>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Bulk Edit Inventory</h1>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Update Purchase Discounts</p>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-0.5">Update Discounts</p>
                 </div>
             </div>
 
@@ -184,42 +246,81 @@ const BulkEditPage: React.FC = () => {
                     <div className="h-px bg-slate-200/60 my-2" />
 
                     {/* Update Action Row */}
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-4 justify-between bg-brand-50/50 p-4 rounded-xl border border-brand-100/50">
-                        <div className="w-full sm:w-auto flex-1">
-                            <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">
-                                New Purchase Discount (%)
-                            </label>
-                            <div className="flex gap-4 items-center">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    placeholder="0"
-                                    value={newDiscountStr}
-                                    onChange={(e) => setNewDiscountStr(e.target.value)}
-                                    className="h-11 w-32 bg-white border-brand-200 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 font-bold text-lg text-brand-900"
-                                />
-                                <div className="text-xs text-brand-600 font-medium max-w-md">
-                                    <p>Enter a new discount percentage to apply to selected products.</p>
-                                    <p className="opacity-80">This will recalculate the Purchase Price based on MRP.</p>
+                    <div className="flex flex-col gap-4 bg-brand-50/50 p-4 rounded-xl border border-brand-100/50">
+                        <div className="flex flex-wrap gap-4 items-end">
+                            {/* Target Field Selection */}
+                            <div className="w-full sm:w-48">
+                                <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">
+                                    Target Field
+                                </label>
+                                <Select value={targetField} onValueChange={(v) => setTargetField(v as TargetField)}>
+                                    <SelectTrigger className="h-11 bg-white border-brand-200 focus:ring-brand-500/20">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="purchase">Purchase Discount</SelectItem>
+                                        <SelectItem value="sales">Sales Discount</SelectItem>
+                                        <SelectItem value="additional">Additional Discount</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Additional Discount Type Selection */}
+                            {targetField === 'additional' && (
+                                <div className="w-full sm:w-48 animate-fadeIn">
+                                    <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">
+                                        Discount Type
+                                    </label>
+                                    <Select value={selectedDiscountTypeId} onValueChange={setSelectedDiscountTypeId}>
+                                        <SelectTrigger className="h-11 bg-white border-brand-200 focus:ring-brand-500/20">
+                                            <SelectValue placeholder="Select Type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {discountTypes.map(dt => (
+                                                <SelectItem key={dt.id} value={dt.id}>{dt.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            {/* New Discount Input */}
+                            <div className="w-full sm:w-auto">
+                                <label className="block text-xs font-bold text-brand-700 uppercase tracking-wider mb-2">
+                                    New {targetField === 'additional' ? 'Value' : 'Discount'} (%)
+                                </label>
+                                <div className="flex gap-4 items-center">
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        placeholder="0"
+                                        value={newDiscountStr}
+                                        onChange={(e) => setNewDiscountStr(e.target.value)}
+                                        className="h-11 w-32 bg-white border-brand-200 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 font-bold text-lg text-brand-900"
+                                    />
+                                    <button
+                                        onClick={handleUpdate}
+                                        disabled={!isValidDiscount || selectedProductIds.size === 0 || isUpdating || (targetField === 'additional' && !selectedDiscountTypeId)}
+                                        className="flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-500/20 hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none min-w-[160px] justify-center"
+                                    >
+                                        {isUpdating ? (
+                                            <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Check className="h-5 w-5" />
+                                                <span>Update {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ''}</span>
+                                            </>
+                                        )}
+                                    </button>
                                 </div>
                             </div>
                         </div>
-
-                        <button
-                            onClick={handleUpdate}
-                            disabled={!isValidDiscount || selectedProductIds.size === 0 || isUpdating}
-                            className="flex items-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-500/20 hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none min-w-[160px] justify-center"
-                        >
-                            {isUpdating ? (
-                                <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                                <>
-                                    <Check className="h-5 w-5" />
-                                    <span>Update {selectedProductIds.size > 0 ? `(${selectedProductIds.size})` : ''}</span>
-                                </>
-                            )}
-                        </button>
+                        <div className="text-xs text-brand-600 font-medium">
+                            {targetField === 'purchase' && <p>Updates Purchase Discount % and recalculates Net Purchase Price based on MRP.</p>}
+                            {targetField === 'sales' && <p>Updates Sales Discount % and recalculates Net Sale Price based on MRP.</p>}
+                            {targetField === 'additional' && <p>Updates or adds the selected Additional Discount type for selected products.</p>}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -241,10 +342,18 @@ const BulkEditPage: React.FC = () => {
                                 <th className="px-4 py-4 font-bold text-slate-700">Brand & Category</th>
                                 <th className="px-4 py-4 font-bold text-slate-700">Product Info</th>
                                 <th className="px-4 py-4 font-bold text-slate-700 text-right">MRP</th>
-                                <th className="px-4 py-4 font-bold text-slate-700 text-right">Current Disc.</th>
-                                <th className="px-4 py-4 font-bold text-slate-700 text-right">Current Price</th>
-                                <th className="px-4 py-4 font-bold text-brand-700 bg-brand-50/50 text-right border-l border-brand-100">New Disc.</th>
-                                <th className="px-4 py-4 font-bold text-brand-700 bg-brand-50/50 text-right">New Price</th>
+                                <th className="px-4 py-4 font-bold text-slate-700 text-right">
+                                    Current {targetField === 'additional' && selectedDiscountTypeId ? 'Value' : 'Disc.'}
+                                </th>
+                                {targetField !== 'additional' && (
+                                    <th className="px-4 py-4 font-bold text-slate-700 text-right">Current Price</th>
+                                )}
+                                <th className="px-4 py-4 font-bold text-brand-700 bg-brand-50/50 text-right border-l border-brand-100">
+                                    New {targetField === 'additional' ? 'Value' : 'Disc.'}
+                                </th>
+                                {targetField !== 'additional' && (
+                                    <th className="px-4 py-4 font-bold text-brand-700 bg-brand-50/50 text-right">New Price</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -255,9 +364,7 @@ const BulkEditPage: React.FC = () => {
                             ) : (
                                 filteredProducts.map((product) => {
                                     const isSelected = selectedProductIds.has(product.id);
-                                    const newPrice = isValidDiscount
-                                        ? product.mrp - (product.mrp * newDiscount / 100)
-                                        : null;
+                                    const newPrice = getNewPrice(product);
 
                                     return (
                                         <tr key={product.id} className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-brand-50/10' : ''}`}>
@@ -281,17 +388,21 @@ const BulkEditPage: React.FC = () => {
                                                 ₹{product.mrp.toFixed(2)}
                                             </td>
                                             <td className="px-4 py-4 text-right text-slate-600">
-                                                {product.purchaseDiscountPercent}%
+                                                {getCurrentValue(product)}
                                             </td>
-                                            <td className="px-4 py-4 text-right text-slate-600">
-                                                ₹{product.purchaseDiscountedPrice.toFixed(2)}
-                                            </td>
+                                            {targetField !== 'additional' && (
+                                                <td className="px-4 py-4 text-right text-slate-600">
+                                                    ₹{targetField === 'purchase' ? product.purchaseDiscountedPrice.toFixed(2) : product.salePrice.toFixed(2)}
+                                                </td>
+                                            )}
                                             <td className="px-4 py-4 text-right font-bold text-brand-600 bg-brand-50/30 border-l border-brand-100/50">
                                                 {isValidDiscount ? `${newDiscount}%` : '-'}
                                             </td>
-                                            <td className="px-4 py-4 text-right font-bold text-brand-600 bg-brand-50/30">
-                                                {newPrice !== null ? `₹${newPrice.toFixed(2)}` : '-'}
-                                            </td>
+                                            {targetField !== 'additional' && (
+                                                <td className="px-4 py-4 text-right font-bold text-brand-600 bg-brand-50/30">
+                                                    {newPrice !== null ? `₹${newPrice.toFixed(2)}` : '-'}
+                                                </td>
+                                            )}
                                         </tr>
                                     );
                                 })
@@ -300,8 +411,6 @@ const BulkEditPage: React.FC = () => {
                     </table>
                 </div>
             </div>
-
-            {/* Sticky Bottom Bar Summary if needed, or just rely on top button */}
         </div>
     );
 };

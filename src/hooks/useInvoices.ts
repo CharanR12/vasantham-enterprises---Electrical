@@ -2,23 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '../services/invoiceService';
 import { Invoice, InvoiceItem } from '../types/inventory';
 import { useAuth } from '@clerk/clerk-react';
+import { useBranch } from '../contexts/BranchContext';
 
 export const useInvoices = () => {
     const queryClient = useQueryClient();
     const { getToken } = useAuth();
+    const { currentBranch } = useBranch();
 
     const invoicesQuery = useQuery({
-        queryKey: ['invoices'],
+        queryKey: ['invoices', currentBranch],
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' });
-            return invoiceService.getAll(token || undefined);
+            return invoiceService.getAll(currentBranch, token || undefined);
         },
     });
 
     const createInvoiceMutation = useMutation({
         mutationFn: async (newInvoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }) => {
             const token = await getToken({ template: 'supabase' });
-            return invoiceService.create(newInvoice, token || undefined);
+            return invoiceService.create(newInvoice, currentBranch, token || undefined);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });

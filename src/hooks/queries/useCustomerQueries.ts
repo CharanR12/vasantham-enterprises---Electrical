@@ -3,12 +3,13 @@ import { useAuth } from '@clerk/clerk-react';
 import { customerService } from '../../services/customerService';
 import { salesPersonService } from '../../services/salesPersonService';
 import { useUserRole } from '../useUserRole';
+import { useBranch } from '../../contexts/BranchContext';
 import { Customer, FollowUpStatus, FollowUp } from '../../types';
 
 export const customerKeys = {
     all: ['customers'] as const,
     lists: () => [...customerKeys.all, 'list'] as const,
-    list: (filterId?: string) => [...customerKeys.lists(), { filterId }] as const,
+    list: (filterId?: string, branch?: string) => [...customerKeys.lists(), { filterId, branch }] as const,
 };
 
 export const salesPersonKeys = {
@@ -20,13 +21,14 @@ export const salesPersonKeys = {
 export const useCustomersQuery = () => {
     const { getToken } = useAuth();
     const { currentRole } = useUserRole();
+    const { currentBranch } = useBranch();
     // filterId removed
 
     return useQuery({
-        queryKey: customerKeys.list(undefined),
+        queryKey: customerKeys.list(undefined, currentBranch),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return customerService.getCustomers(token);
+            return customerService.getCustomers(currentBranch, token);
         },
         select: (data) => {
             if (currentRole !== 'admin') {
@@ -60,11 +62,12 @@ export const useAddCustomerMutation = () => {
     const queryClient = useQueryClient();
     const { getToken } = useAuth();
     const { user } = useUserRole();
+    const { currentBranch } = useBranch();
 
     return useMutation({
         mutationFn: async (customerData: Omit<Customer, 'id' | 'createdAt'>) => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return customerService.createCustomer(customerData, user?.id, token);
+            return customerService.createCustomer(customerData, currentBranch, user?.id, token);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: customerKeys.all });
@@ -75,11 +78,12 @@ export const useAddCustomerMutation = () => {
 export const useUpdateCustomerMutation = () => {
     const queryClient = useQueryClient();
     const { getToken } = useAuth();
+    const { currentBranch } = useBranch();
 
     return useMutation({
         mutationFn: async (customer: Customer) => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return customerService.updateCustomer(customer.id, customer, token);
+            return customerService.updateCustomer(customer.id, customer, currentBranch, token);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: customerKeys.all });

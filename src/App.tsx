@@ -1,5 +1,5 @@
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { BranchProvider } from './contexts/BranchContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ExportProvider from './components/ExportProvider';
 import Layout from './components/Layout';
@@ -20,24 +20,26 @@ function App() {
         path="/*"
         element={
           <ProtectedRoute>
-            <ExportProvider>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<TodayFollowUpsPage />} />
-                  <Route path="/inventory/bulk-edit" element={<BulkEditPage />} />
-                  <Route path="/inventory" element={<InventoryPage />} />
-                  <Route path="/invoices" element={<InvoicesPage />} />
-                  <Route path="/files" element={<FilesPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/analytics" element={<AnalyticsPage />} />
-                  {/* Legacy routes for backward compatibility */}
-                  <Route path="/admin" element={<SettingsPage />} />
-                  <Route path="/inventory/settings" element={<SettingsPage />} />
-                  {/* Catch-all for protected routes */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Layout>
-            </ExportProvider>
+            <BranchProvider>
+              <ExportProvider>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<TodayFollowUpsPage />} />
+                    <Route path="/inventory/bulk-edit" element={<BulkEditPage />} />
+                    <Route path="/inventory" element={<InventoryPage />} />
+                    <Route path="/invoices" element={<InvoicesPage />} />
+                    <Route path="/files" element={<FilesPage />} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/analytics" element={<AnalyticsPage />} />
+                    {/* Legacy routes for backward compatibility */}
+                    <Route path="/admin" element={<SettingsPage />} />
+                    <Route path="/inventory/settings" element={<SettingsPage />} />
+                    {/* Catch-all for protected routes */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Layout>
+              </ExportProvider>
+            </BranchProvider>
           </ProtectedRoute>
         }
       />

@@ -2,6 +2,7 @@ import React, { useState, createContext, useContext, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserButton, useClerk, useUser } from '@clerk/clerk-react';
 import { useUserRole } from '../hooks/useUserRole';
+import { useBranch } from '../contexts/BranchContext';
 import {
   ShoppingCart,
   Package,
@@ -14,7 +15,9 @@ import {
   Download,
   Building2,
   FileText,
-  FolderOpen
+  FolderOpen,
+  Sun,
+  MapPin
 } from 'lucide-react';
 
 type SidebarContextType = {
@@ -60,6 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onExport }) => {
   const { openOrganizationProfile } = useClerk();
   const { user } = useUser();
   const { currentRole } = useUserRole();
+  const { currentBranch, setBranch, availableBranches } = useBranch();
   const { isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen } = useSidebar();
 
   // Scroll to top on route change
@@ -159,6 +163,43 @@ const Sidebar: React.FC<SidebarProps> = ({ onExport }) => {
 
       {/* Actions */}
       <div className="p-3 border-t border-slate-100 space-y-1.5">
+        {/* Branch Switcher - Admin Only */}
+        {currentRole === 'admin' && (
+          <div className={`px-3 py-2 ${isCollapsed ? 'hidden' : ''}`}>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 block">
+              Branch
+            </span>
+            <div className="flex bg-slate-100 p-1 rounded-lg">
+              {availableBranches.map((branch) => (
+                <button
+                  key={branch}
+                  onClick={() => setBranch(branch)}
+                  className={`
+                    flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-semibold
+                    transition-all duration-200
+                    ${currentBranch === branch
+                      ? 'bg-white text-brand-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                    }
+                  `}
+                  title={branch}
+                >
+                  {branch === 'Solar' ? <Sun className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                  <span className="truncate">{branch === 'Kaikativalasu' ? 'Main' : branch}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Collapsed Branch Indicator */}
+        {currentRole === 'admin' && isCollapsed && (
+          <div className="flex justify-center pb-2 border-b border-slate-100 mb-2">
+            <div className="h-8 w-8 bg-brand-50 rounded-lg flex items-center justify-center text-brand-600" title={`Current Branch: ${currentBranch}`}>
+              {currentBranch === 'Solar' ? <Sun className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+            </div>
+          </div>
+        )}
         {(onExport && currentRole === 'admin') && (
           <button
             onClick={() => {

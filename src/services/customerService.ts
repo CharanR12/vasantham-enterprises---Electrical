@@ -2,7 +2,7 @@ import { getClient, handleSupabaseError } from './apiUtils';
 import { Customer, FollowUp, FollowUpStatus, ReferralSource } from '../types';
 
 export const customerService = {
-    getCustomers: async (clerkToken?: string): Promise<Customer[]> => {
+    getCustomers: async (branch: string, clerkToken?: string): Promise<Customer[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
@@ -11,9 +11,8 @@ export const customerService = {
           *,
           sales_person:sales_persons(id, name),
           follow_ups(*)
-        `);
-
-
+        `)
+                .eq('branch', branch);
 
             const { data: customersData, error: customersError } = await query
                 .order('created_at', { ascending: false });
@@ -45,7 +44,7 @@ export const customerService = {
         }
     },
 
-    createCustomer: async (customerData: Omit<Customer, 'id' | 'createdAt'>, userId?: string, clerkToken?: string): Promise<Customer> => {
+    createCustomer: async (customerData: Omit<Customer, 'id' | 'createdAt'>, branch: string, userId?: string, clerkToken?: string): Promise<Customer> => {
         try {
             const client = getClient(clerkToken);
             const { data: customer, error: customerError } = await client
@@ -58,7 +57,8 @@ export const customerService = {
                     sales_person_id: customerData.salesPerson.id,
                     remarks: customerData.remarks,
                     last_contacted_date: customerData.lastContactedDate || null,
-                    created_by: userId
+                    created_by: userId,
+                    branch: branch
                 })
                 .select()
                 .single();
@@ -83,7 +83,7 @@ export const customerService = {
                 handleSupabaseError(followUpsError);
             }
 
-            const customers = await customerService.getCustomers(clerkToken);
+            const customers = await customerService.getCustomers(branch, clerkToken);
             return customers.find(c => c.id === customer.id)!;
         } catch (error) {
             console.error('Error creating customer:', error);
@@ -91,7 +91,7 @@ export const customerService = {
         }
     },
 
-    updateCustomer: async (id: string, customerData: Customer, clerkToken?: string): Promise<Customer> => {
+    updateCustomer: async (id: string, customerData: Customer, branch: string, clerkToken?: string): Promise<Customer> => {
         try {
             const client = getClient(clerkToken);
             const { error: customerError } = await client
@@ -133,7 +133,7 @@ export const customerService = {
                 handleSupabaseError(followUpsError);
             }
 
-            const customers = await customerService.getCustomers(clerkToken);
+            const customers = await customerService.getCustomers(branch, clerkToken);
             return customers.find(c => c.id === id)!;
         } catch (error) {
             console.error('Error updating customer:', error);

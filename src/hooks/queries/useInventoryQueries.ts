@@ -6,6 +6,7 @@ import { saleEntryService } from '../../services/saleEntryService';
 import { categoryService } from '../../services/categoryService';
 import { discountTypeService } from '../../services/discountTypeService';
 import { useUserRole } from '../useUserRole';
+import { useBranch } from '../../contexts/BranchContext';
 import { Product, SaleEntry } from '../../types/inventory';
 
 export const inventoryKeys = {
@@ -18,7 +19,7 @@ export const inventoryKeys = {
     brandList: (filterId?: string) => [...inventoryKeys.brands(), { filterId }] as const,
     categoryList: (brandId?: string) => [...inventoryKeys.categories(), { brandId }] as const,
     productList: (filterId?: string) => [...inventoryKeys.products(), { filterId }] as const,
-    saleList: (filterId?: string) => [...inventoryKeys.sales(), { filterId }] as const,
+    saleList: (filterId?: string, branch?: string) => [...inventoryKeys.sales(), { filterId, branch }] as const,
 };
 
 export const useBrandsQuery = () => {
@@ -59,12 +60,13 @@ export const useProductsQuery = () => {
 
 export const useSalesEntriesQuery = () => {
     const { getToken } = useAuth();
+    const { currentBranch } = useBranch();
 
     return useQuery({
-        queryKey: inventoryKeys.saleList(undefined),
+        queryKey: inventoryKeys.saleList(undefined, currentBranch),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return saleEntryService.getSaleEntries(token);
+            return saleEntryService.getSaleEntries(currentBranch, token);
         },
     });
 };
@@ -212,11 +214,12 @@ export const useAddSaleEntryMutation = () => {
     const queryClient = useQueryClient();
     const { getToken } = useAuth();
     const { user } = useUserRole();
+    const { currentBranch } = useBranch();
 
     return useMutation({
         mutationFn: async (saleEntry: Omit<SaleEntry, 'id' | 'createdAt'>) => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return saleEntryService.createSaleEntry(saleEntry, user?.id, token);
+            return saleEntryService.createSaleEntry(saleEntry, currentBranch, user?.id, token);
         },
         onSuccess: () => {
             // Sale entry affects both sales list and product stock

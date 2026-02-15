@@ -1,5 +1,6 @@
 import React from 'react';
 import { ReferralSource, SalesPerson } from '../../types';
+import { useBranch } from '../../contexts/BranchContext'; // Import useBranch
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +32,18 @@ export const CustomerBasicDetails: React.FC<CustomerBasicDetailsProps> = ({
     referralSources,
     disabled
 }) => {
+    const { currentBranch } = useBranch(); // Get current branch
+
+    // Filter sales persons based on branch
+    const displayedSalesPersons = currentBranch === 'Solar'
+        ? salesPersons.filter(sp =>
+            sp.name.toLowerCase().includes('solar') ||
+            sp.name.toLowerCase().includes('branch')
+        )
+        : salesPersons;
+
+    const isSolarRestricted = currentBranch === 'Solar';
+
     return (
         <div className="space-y-6">
             <div className="space-y-2.5">
@@ -112,13 +125,13 @@ export const CustomerBasicDetails: React.FC<CustomerBasicDetailsProps> = ({
                     <Select
                         value={formData.salesPerson.id}
                         onValueChange={handleSalesPersonChange}
-                        disabled={disabled}
+                        disabled={disabled || (isSolarRestricted && displayedSalesPersons.length > 0)} // Disable if Solar restricted AND valid option exists
                     >
                         <SelectTrigger className={`h-12 bg-slate-50 border-slate-200/60 rounded-xl focus:ring-brand-500/20 focus:border-brand-500 text-slate-700 font-medium ${errors.salesPerson ? 'border-red-500 bg-red-50/30' : ''}`}>
                             <SelectValue placeholder="Executive" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-slate-200 shadow-xl overflow-hidden">
-                            {salesPersons.map((person) => (
+                            {displayedSalesPersons.map((person) => (
                                 <SelectItem key={person.id} value={person.id} className="py-3 focus:bg-brand-50">
                                     {person.name}
                                 </SelectItem>

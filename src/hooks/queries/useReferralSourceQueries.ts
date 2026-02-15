@@ -2,23 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/clerk-react';
 import { referralSourceService } from '../../services/referralSourceService';
 import { useUserRole } from '../useUserRole';
+import { useBranch } from '../../contexts/BranchContext';
 
 export const referralSourceKeys = {
     all: ['referralSources'] as const,
     lists: () => [...referralSourceKeys.all, 'list'] as const,
-    list: (filterId?: string) => [...referralSourceKeys.lists(), { filterId }] as const,
+    list: (filterId?: string, branch?: string) => [...referralSourceKeys.lists(), { filterId, branch }] as const,
 };
 
 export const useReferralSourcesQuery = () => {
     const { getToken } = useAuth();
+    const { currentBranch } = useBranch();
 
     // filterId removed
 
     return useQuery({
-        queryKey: referralSourceKeys.list(undefined),
+        queryKey: referralSourceKeys.list(undefined, currentBranch),
         queryFn: async () => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return referralSourceService.getReferralSources(token);
+            return referralSourceService.getReferralSources(currentBranch, token);
         },
     });
 };
@@ -27,11 +29,12 @@ export const useAddReferralSourceMutation = () => {
     const queryClient = useQueryClient();
     const { getToken } = useAuth();
     const { user } = useUserRole();
+    const { currentBranch } = useBranch();
 
     return useMutation({
         mutationFn: async (name: string) => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return referralSourceService.createReferralSource(name, user?.id, token);
+            return referralSourceService.createReferralSource(name, currentBranch, user?.id, token);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: referralSourceKeys.all });

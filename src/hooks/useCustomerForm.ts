@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Customer, ReferralSource, SalesPerson, FollowUpStatus } from '../types';
+import { useBranch } from '../contexts/BranchContext';
 import {
     useAddCustomerMutation,
     useUpdateCustomerMutation,
@@ -7,6 +8,7 @@ import {
 } from './queries/useCustomerQueries';
 
 export const useCustomerForm = (customer: Customer | undefined, salesPersons: SalesPerson[], onClose: () => void) => {
+    const { currentBranch } = useBranch(); // Get current branch
     const addCustomerMutation = useAddCustomerMutation();
     const updateCustomerMutation = useUpdateCustomerMutation();
     const deleteCustomerMutation = useDeleteCustomerMutation();
@@ -35,6 +37,24 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
 
     const [formData, setFormData] = useState<Customer | Omit<Customer, 'id' | 'createdAt'>>(customer || initialState);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Auto-select "Solar Branch" sales person if in Solar branch
+    useEffect(() => {
+        if (currentBranch === 'Solar') {
+            const solarPerson = salesPersons.find(sp =>
+                sp.name.toLowerCase().includes('solar') ||
+                sp.name.toLowerCase().includes('branch') // Fallback if name is just "Branch"? Safest is "Solar"
+            );
+
+            if (solarPerson && (!customer || formData.salesPerson.id !== solarPerson.id)) {
+                // If it's a new customer OR we want to enforce it for existing ones too (usually good to enforce)
+                // But be careful not to overwrite valid data if they view an old record from another branch? 
+                // Ah, data is already segregated by branch. So an existing Solar customer should already have Solar sales person.
+                // If they don't, we update it in form state (user still needs to save).
+                setFormData(prev => ({ ...prev, salesPerson: solarPerson }));
+            }
+        }
+    }, [currentBranch, salesPersons, customer]);
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};

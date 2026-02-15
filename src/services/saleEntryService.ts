@@ -2,12 +2,13 @@ import { getClient, handleSupabaseError, ApiError } from './apiUtils';
 import { SaleEntry } from '../types/inventory';
 
 export const saleEntryService = {
-    getSaleEntries: async (clerkToken?: string): Promise<SaleEntry[]> => {
+    getSaleEntries: async (branch: string, clerkToken?: string): Promise<SaleEntry[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
                 .from('sale_entries')
-                .select('*');
+                .select('*')
+                .eq('branch', branch);
 
 
 
@@ -31,7 +32,7 @@ export const saleEntryService = {
         }
     },
 
-    createSaleEntry: async (saleData: Omit<SaleEntry, 'id' | 'createdAt'>, userId?: string, clerkToken?: string): Promise<SaleEntry> => {
+    createSaleEntry: async (saleData: Omit<SaleEntry, 'id' | 'createdAt'>, branch: string, userId?: string, clerkToken?: string): Promise<SaleEntry> => {
         try {
             const client = getClient(clerkToken);
             const { data: product, error: productError } = await client
@@ -54,7 +55,8 @@ export const saleEntryService = {
                     customer_name: saleData.customerName,
                     bill_number: saleData.billNumber || null,
                     quantity_sold: saleData.quantitySold,
-                    created_by: userId
+                    created_by: userId,
+                    branch: branch
                 })
                 .select()
                 .single();

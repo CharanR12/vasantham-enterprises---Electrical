@@ -4,7 +4,7 @@ import { handleSupabaseError } from './apiUtils';
 
 export const invoiceService = {
     // Fetch all invoices
-    getAll: async (token?: string): Promise<Invoice[]> => {
+    getAll: async (branch: string, token?: string): Promise<Invoice[]> => {
         try {
             const client = getClient(token);
             const { data: invoices, error } = await client
@@ -13,6 +13,7 @@ export const invoiceService = {
                 *,
                 items:invoice_items(*)
             `)
+                .eq('branch', branch)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -86,7 +87,7 @@ export const invoiceService = {
     },
 
     // Create new invoice
-    create: async (invoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }, token?: string): Promise<Invoice> => {
+    create: async (invoice: Omit<Invoice, 'id' | 'createdAt' | 'items'> & { items: Omit<InvoiceItem, 'id' | 'invoiceId' | 'createdAt'>[] }, branch: string, token?: string): Promise<Invoice> => {
         try {
             const client = getClient(token);
             // 1. Create invoice header
@@ -97,7 +98,8 @@ export const invoiceService = {
                     customer_name: invoice.customerName || null,
                     company_name: invoice.companyName || null,
                     total_amount: invoice.totalAmount,
-                    status: invoice.status || 'Unpaid'
+                    status: invoice.status || 'Unpaid',
+                    branch: branch
                 }])
                 .select()
                 .single();

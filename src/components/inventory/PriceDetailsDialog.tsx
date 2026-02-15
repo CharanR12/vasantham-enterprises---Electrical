@@ -2,6 +2,7 @@ import React from 'react';
 import { IndianRupee } from 'lucide-react';
 import { Product } from '../../types/inventory';
 import { useUserRole } from '../../hooks/useUserRole';
+import { useDiscountTypesQuery } from '../../hooks/queries/useInventoryQueries';
 import {
     Dialog,
     DialogContent,
@@ -23,6 +24,7 @@ const PriceDetailsDialog: React.FC<PriceDetailsDialogProps> = ({
     onAddPricing,
 }) => {
     const { currentRole, user } = useUserRole();
+    const { data: discountTypes = [] } = useDiscountTypesQuery();
 
     const formatPrice = (value: number): string => {
         return value > 0 ? `₹${value.toLocaleString()}` : '-';
@@ -33,7 +35,7 @@ const PriceDetailsDialog: React.FC<PriceDetailsDialogProps> = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-sm rounded-2xl">
+            <DialogContent className="max-w-sm rounded-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-lg font-semibold flex items-center">
                         <IndianRupee className="h-5 w-5 mr-2 text-emerald-600" />
@@ -82,39 +84,46 @@ const PriceDetailsDialog: React.FC<PriceDetailsDialogProps> = ({
                             <div className="bg-emerald-50 rounded-xl p-4 space-y-3 border border-emerald-100">
                                 <h4 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest border-b border-emerald-200 pb-2">Sales Info</h4>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-emerald-800 text-sm font-bold">Sale Price</span>
-                                    <span className="font-bold text-lg text-emerald-700">{formatPrice(product.salePrice)}</span>
+                                    <span className="text-slate-600 text-sm">Rate</span>
+                                    <span className="font-bold text-slate-900">{formatPrice(product.mrp)}</span>
                                 </div>
                                 {product.saleDiscountPercent > 0 && (
                                     <div className="flex justify-between items-center">
-                                        <span className="text-emerald-700 text-sm">Discount ({product.saleDiscountPercent}%)</span>
+                                        <span className="text-slate-600 text-sm">Discount ({product.saleDiscountPercent}%)</span>
                                         <span className="font-bold text-emerald-600">
-                                            -{formatPrice((product.salePrice * product.saleDiscountPercent) / 100)}
+                                            -{formatPrice((product.mrp * product.saleDiscountPercent) / 100)}
                                         </span>
                                     </div>
                                 )}
+                                <div className="flex justify-between items-center pt-2 border-t border-emerald-200/50">
+                                    <span className="text-emerald-700 text-sm font-bold">Net Sale</span>
+                                    <span className="font-bold text-lg text-emerald-700">{formatPrice(product.salePrice)}</span>
+                                </div>
                             </div>
 
                             {/* 4. Additional Discounts Section */}
-                            {(product.saleDiscountAmount > 0 || (product.salesDiscounts && Object.keys(product.salesDiscounts).length > 0)) && (
+                            {((product.saleDiscountAmount || 0) > 0 || (product.salesDiscounts && Object.keys(product.salesDiscounts).length > 0)) && (
                                 <div className="bg-amber-50 rounded-xl p-4 space-y-3 border border-amber-100">
                                     <h4 className="text-[10px] font-bold text-amber-600 uppercase tracking-widest border-b border-amber-200 pb-2">Additional Discounts</h4>
 
-                                    {product.saleDiscountAmount > 0 && (
+                                    {(product.saleDiscountAmount || 0) > 0 && (
                                         <div className="flex justify-between items-center">
                                             <span className="text-amber-700 text-sm">Flat Discount</span>
-                                            <span className="font-bold text-amber-700">-{formatPrice(product.saleDiscountAmount)}</span>
+                                            <span className="font-bold text-amber-700">-{formatPrice(product.saleDiscountAmount || 0)}</span>
                                         </div>
                                     )}
 
-                                    {product.salesDiscounts && Object.entries(product.salesDiscounts).map(([typeId, percent]) => (
-                                        <div key={typeId} className="flex justify-between items-center">
-                                            <span className="text-amber-700 text-sm">Extra ({percent}%)</span>
-                                            <span className="font-bold text-amber-700">
-                                                -{formatPrice((product.salePrice * percent) / 100)}
-                                            </span>
-                                        </div>
-                                    ))}
+                                    {product.salesDiscounts && Object.entries(product.salesDiscounts).map(([typeId, percent]) => {
+                                        const discountName = discountTypes.find(dt => dt.id === typeId)?.name || 'Extra';
+                                        return (
+                                            <div key={typeId} className="flex justify-between items-center">
+                                                <span className="text-amber-700 text-sm">{discountName} ({percent}%)</span>
+                                                <span className="font-bold text-amber-700">
+                                                    -{formatPrice((product.salePrice * percent) / 100)}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

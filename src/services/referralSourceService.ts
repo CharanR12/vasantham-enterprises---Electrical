@@ -6,14 +6,13 @@ export interface ReferralSourceEntity {
 }
 
 export const referralSourceService = {
-    getReferralSources: async (clerkToken?: string): Promise<ReferralSourceEntity[]> => {
+    getReferralSources: async (branch: string, clerkToken?: string): Promise<ReferralSourceEntity[]> => {
         try {
             const client = getClient(clerkToken);
             let query = client
                 .from('referral_sources')
-                .select('*');
-
-
+                .select('*')
+                .eq('branch', branch);
 
             const { data, error } = await query
                 .order('name');
@@ -30,14 +29,15 @@ export const referralSourceService = {
         }
     },
 
-    createReferralSource: async (name: string, userId?: string, clerkToken?: string): Promise<ReferralSourceEntity> => {
+    createReferralSource: async (name: string, branch: string, userId?: string, clerkToken?: string): Promise<ReferralSourceEntity> => {
         try {
             const client = getClient(clerkToken);
             const { data, error } = await client
                 .from('referral_sources')
                 .insert({
                     name: name.trim(),
-                    created_by: userId
+                    created_by: userId,
+                    branch: branch
                 })
                 .select()
                 .single();
