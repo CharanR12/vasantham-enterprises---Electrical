@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useCustomerForm } from '../hooks/useCustomerForm';
+import { useUserRole } from '../hooks/useUserRole';
 import { CustomerBasicDetails } from './forms/CustomerBasicDetails';
 import { CustomerFollowUpSection } from './forms/CustomerFollowUpSection';
 
@@ -45,6 +46,8 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, salesPer
     removeFollowUp
   } = useCustomerForm(customer, salesPersons, onClose);
 
+  const { currentRole } = useUserRole();
+
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
@@ -58,7 +61,7 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onClose, salesPer
               <p className="text-slate-400 text-sm font-medium mt-1">Manage customer details</p>
             </DialogHeader>
             <div className="flex items-center gap-2">
-              {customer && (
+              {(customer && currentRole === 'admin') && (
                 <Button
                   variant="ghost"
                   onClick={() => setShowDeleteConfirm(true)}

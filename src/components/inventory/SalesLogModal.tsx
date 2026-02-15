@@ -4,6 +4,7 @@ import { Calendar, User, FileText, Package, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { useDeleteSaleEntryMutation } from '../../hooks/queries/useInventoryQueries';
+import { useUserRole } from '../../hooks/useUserRole';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
   };
 
   const deleteSaleEntryMutation = useDeleteSaleEntryMutation();
+  const { currentRole } = useUserRole();
 
   const handleDelete = async (entryId: string) => {
     if (window.confirm('Are you sure you want to delete this sale entry? This will restore the stock quantity.')) {
@@ -118,14 +120,16 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
                           {entry.quantitySold} units
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-red-600 hover:text-red-900 transition-colors p-1"
-                            title="Delete Entry"
-                            disabled={deleteSaleEntryMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {currentRole === 'admin' && (
+                            <button
+                              onClick={() => handleDelete(entry.id)}
+                              className="text-red-600 hover:text-red-900 transition-colors p-1"
+                              title="Delete Entry"
+                              disabled={deleteSaleEntryMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -160,16 +164,18 @@ const SalesLogModal: React.FC<SalesLogModalProps> = ({ product, salesEntries, on
 
                     </div>
 
-                    <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
-                      <button
-                        onClick={() => handleDelete(entry.id)}
-                        className="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
-                        disabled={deleteSaleEntryMutation.isPending}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </div>
+                    {currentRole === 'admin' && (
+                      <div className="mt-3 pt-3 border-t border-gray-100 flex justify-end">
+                        <button
+                          onClick={() => handleDelete(entry.id)}
+                          className="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                          disabled={deleteSaleEntryMutation.isPending}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
