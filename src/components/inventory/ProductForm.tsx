@@ -42,6 +42,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
 
   const { currentRole, user } = useUserRole();
   const [step, setStep] = useState(1);
+  const [localPrice, setLocalPrice] = useState<{ id: string | null; value: string | null }>({ id: null, value: null });
 
   const isOwner = product?.createdBy === user?.id;
   const canViewPurchaseInfo = currentRole === 'admin' || isOwner || !product;
@@ -396,7 +397,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
                             const availableTypes = discountTypes.filter(dt => dt.id === dtId || !usedIds.includes(dt.id));
 
                             const mrp = Number(formData.mrp) || 0;
-                            const currentPrice = mrp > 0 ? (mrp * (1 - pct / 100)).toFixed(2) : '';
+                            const rawPrice = mrp > 0 ? (mrp * (1 - pct / 100)) : 0;
+                            const currentPrice = mrp > 0 ? Math.round(rawPrice * 100) / 100 : '';
+
+                            // Use local value if this specific field is being edited to allow typing "10." etc.
+                            const displayValue = (localPrice.id === dtId && localPrice.value !== null)
+                              ? localPrice.value
+                              : currentPrice;
 
                             return (
                               <div key={dtId} className="grid grid-cols-12 gap-2 items-center">
@@ -434,8 +441,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onClose }) => {
                                 <div className="col-span-4">
                                   <Input
                                     type="number"
-                                    value={currentPrice}
-                                    onChange={(e) => handleDiscountPriceChange(dtId, e.target.value)}
+                                    value={displayValue}
+                                    onChange={(e) => {
+                                      setLocalPrice({ id: dtId, value: e.target.value });
+                                      handleDiscountPriceChange(dtId, e.target.value);
+                                    }}
+                                    onFocus={() => setLocalPrice({ id: dtId, value: currentPrice !== '' ? String(currentPrice) : '' })}
+                                    onBlur={() => setLocalPrice({ id: null, value: null })}
                                     className="h-10 bg-white border-amber-200 rounded-xl focus-visible:ring-amber-500/20 font-bold text-amber-900"
                                     placeholder="Price"
                                     min="0"

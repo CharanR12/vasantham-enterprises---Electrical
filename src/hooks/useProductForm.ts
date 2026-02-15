@@ -183,7 +183,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
                 newData.purchaseDiscountedPrice = Number((mrpVal * (1 - inputValue / 100)).toFixed(2));
             } else if (name === 'purchaseDiscountedPrice') {
                 if (mrpVal > 0) {
-                    newData.purchaseDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(2));
+                    newData.purchaseDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(6));
                 }
             } else if (name === 'saleDiscountPercent') {
                 if (mrpVal > 0) {
@@ -194,7 +194,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
                 }
             } else if (name === 'salePrice') {
                 if (mrpVal > 0) {
-                    newData.saleDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(2));
+                    newData.saleDiscountPercent = Number((((mrpVal - inputValue) / mrpVal) * 100).toFixed(6));
                 }
             }
 
@@ -226,7 +226,7 @@ export const useProductForm = (product: Product | undefined, onClose: () => void
         const mrp = typeof formData.mrp === 'number' ? formData.mrp : parseFloat(String(formData.mrp)) || 0;
 
         if (mrp > 0 && !isNaN(price)) {
-            const discountPercent = Number((((mrp - price) / mrp) * 100).toFixed(2));
+            const discountPercent = Number((((mrp - price) / mrp) * 100).toFixed(6));
             setFormData(prev => ({
                 ...prev,
                 salesDiscounts: {
