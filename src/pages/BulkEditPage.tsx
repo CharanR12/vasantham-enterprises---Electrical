@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, Search } from 'lucide-react';
-import { useProductsQuery, useBrandsQuery, useCategoriesQuery, useDiscountTypesQuery } from '../hooks/queries/useInventoryQueries';
+import { useProductsQuery, useBrandsQuery, useCategoriesQuery, useDiscountTypesQuery, inventoryKeys } from '../hooks/queries/useInventoryQueries';
 import { useUserRole } from '../hooks/useUserRole';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { MultiSelectCombobox } from '@/components/ui/multi-select-combobox';
@@ -16,6 +16,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 type TargetField = 'purchase' | 'sales' | 'additional';
 
@@ -48,6 +56,7 @@ const BulkEditPage: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [targetField, setTargetField] = useState<TargetField>('purchase');
     const [selectedDiscountTypeId, setSelectedDiscountTypeId] = useState<string>('');
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
     const brandOptions = brands.map(b => ({ value: b.id, label: b.name }));
 
@@ -90,6 +99,13 @@ const BulkEditPage: React.FC = () => {
     const newDiscount = parseFloat(newDiscountStr);
     const isValidDiscount = !isNaN(newDiscount) && newDiscount >= 0 && newDiscount <= 100;
 
+    const isAllSelected = filteredProducts.length > 0 && selectedProductIds.size === filteredProducts.length;
+
+    // Derived state for display
+    const fieldName = targetField === 'purchase' ? 'Purchase Discount' :
+        targetField === 'sales' ? 'Sales Discount' :
+            discountTypes.find(dt => dt.id === selectedDiscountTypeId)?.name || 'Additional Discount';
+
     const handleUpdate = async () => {
         if (!isValidDiscount) {
             toast.error('Please enter a valid discount percentage (0-100)');
@@ -106,15 +122,16 @@ const BulkEditPage: React.FC = () => {
             return;
         }
 
-        const fieldName = targetField === 'purchase' ? 'Purchase Discount' :
-            targetField === 'sales' ? 'Sales Discount' :
-                discountTypes.find(dt => dt.id === selectedDiscountTypeId)?.name || 'Additional Discount';
+        // Open Dialog instead of window.confirm
+        setShowConfirmDialog(true);
+    };
 
-        if (!window.confirm(`Are you sure you want to update ${selectedProductIds.size} products with a ${newDiscount}% ${fieldName}?`)) {
-            return;
-        }
-
+    const handleConfirmUpdate = async () => {
         setIsUpdating(true);
+        setShowConfirmDialog(false); // Close dialog immediately or keep open? standard is close then show loading or keep open with loading state. 
+        // Let's close it and let the button show loading if needed, but actually the main button is outside.
+        // Better: Keep the main logic clean.
+
         try {
             const updates = Array.from(selectedProductIds).map(id => {
                 const product = products.find(p => p.id === id);
@@ -140,6 +157,8 @@ const BulkEditPage: React.FC = () => {
                         .eq('id', id);
                 } else if (targetField === 'additional') {
                     const currentDiscounts = product.salesDiscounts || {};
+                    // Create a new object to ensure React detects change if we were setting request state, 
+                    // but here we are sending to DB.
                     const updatedDiscounts = {
                         ...currentDiscounts,
                         [selectedDiscountTypeId]: newDiscount
@@ -157,10 +176,10 @@ const BulkEditPage: React.FC = () => {
             await Promise.all(updates);
 
             // Invalidate queries to refresh data
-            await queryClient.invalidateQueries({ queryKey: ['products'] });
+            await queryClient.invalidateQueries({ queryKey: inventoryKeys.products() });
 
-            toast.success(`Successfully updated ${selectedProductIds.size} products`);
-            navigate('/inventory');
+            toast.success(`Successfully updated ${selectedProductIds.size} products. You can continue editing.`);
+            // navigate('/inventory'); // REMOVED: User wants to stay on the page
         } catch (error) {
             console.error('Error updating products:', error);
             toast.error('Failed to update products');
@@ -168,8 +187,6 @@ const BulkEditPage: React.FC = () => {
             setIsUpdating(false);
         }
     };
-
-    const isAllSelected = filteredProducts.length > 0 && selectedProductIds.size === filteredProducts.length;
 
     // Helper to get current value for display
     const getCurrentValue = (product: any) => {
@@ -411,6 +428,31 @@ const BulkEditPage: React.FC = () => {
                     </table>
                 </div>
             </div>
+
+            <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirm Bulk Update</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to update {selectedProductIds.size} products with a {newDiscount}% {fieldName}?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <button
+                            onClick={() => setShowConfirmDialog(false)}
+                            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleConfirmUpdate}
+                            className="px-4 py-2 bg-brand-600 text-white rounded-lg font-bold hover:bg-brand-700 transition-colors"
+                        >
+                            Confirm Update
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
