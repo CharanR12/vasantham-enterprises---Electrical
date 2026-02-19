@@ -15,7 +15,7 @@ type InventoryTableProps = {
 
 const formatDate = (date: string) => {
   try {
-    return format(parseISO(date), 'dd MMM yyyy');
+    return format(parseISO(date), 'dd/MM/yyyy');
   } catch {
     return '-';
   }

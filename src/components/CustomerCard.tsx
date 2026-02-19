@@ -19,7 +19,7 @@ const CustomerCard: React.FC<CustomerCardProps> = ({ customer }) => {
   const formatDate = (dateString: string): string => {
     try {
       const date = parse(dateString, 'yyyy-MM-dd', new Date());
-      return format(date, 'EEE, dd/MM/yyyy');
+      return format(date, 'dd/MM/yyyy');
     } catch {
       return '-';
     }

@@ -35,7 +35,7 @@ export const customerService = {
                     remarks: fu.remarks || '',
                     salesAmount: fu.sales_amount ? parseFloat(fu.sales_amount) : undefined,
                     amountReceived: fu.amount_received
-                })),
+                })).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()),
                 createdAt: customer.created_at.split('T')[0],
                 branch: customer.branch
             }));

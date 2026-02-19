@@ -31,7 +31,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
 
   const formatDate = (dateString: string): string => {
     try {
-      return format(parseISO(dateString), 'dd MMM yyyy');
+      return format(parseISO(dateString), 'dd/MM/yyyy');
     } catch (e) {
       return dateString;
     }
