@@ -126,26 +126,66 @@ export const CustomerFollowUpSection: React.FC<CustomerFollowUpSectionProps> = (
                         </div>
 
                         {followUp.status === 'Sales completed' && (
-                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sales Amount (₹)</Label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <span className="text-sm font-black text-brand-600 italic">₹</span>
-                                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-emerald-50/30 border border-emerald-100/50 rounded-2xl animate-in slide-in-from-top-2 duration-300">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bill No</Label>
                                     <Input
-                                        type="number"
-                                        value={followUp.salesAmount || ''}
-                                        onChange={(e) => handleFollowUpChange(index, 'salesAmount', e.target.value)}
-                                        className={`h-11 pl-9 bg-white border-slate-200/60 rounded-2xl text-sm font-black text-slate-800 focus:ring-brand-500/20 ${errors[`followUp_${index}_salesAmount`] ? 'border-red-500 bg-red-50/20' : ''}`}
-                                        placeholder="0.00"
-                                        min="0"
-                                        step="0.01"
+                                        type="text"
+                                        value={followUp.billNo || ''}
+                                        onChange={(e) => handleFollowUpChange(index, 'billNo', e.target.value)}
+                                        className="h-11 bg-white border-slate-200/60 rounded-2xl text-sm font-medium focus:ring-brand-500/20"
+                                        placeholder="INV-001"
                                         disabled={disabled}
                                     />
                                 </div>
-                                {errors[`followUp_${index}_salesAmount`] && (
-                                    <p className="text-red-500 text-[10px] font-black uppercase tracking-wider ml-1 mt-1.5">{errors[`followUp_${index}_salesAmount`]}</p>
-                                )}
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bill Amount (₹)</Label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <span className="text-sm font-black text-emerald-600 italic">₹</span>
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            value={followUp.billAmount || ''}
+                                            onChange={(e) => handleFollowUpChange(index, 'billAmount', e.target.value)}
+                                            className={`h-11 pl-9 bg-white border-slate-200/60 rounded-2xl text-sm font-bold text-slate-800 focus:ring-brand-500/20 ${errors[`followUp_${index}_salesAmount`] ? 'border-red-500 bg-red-50/20' : ''}`}
+                                            placeholder="0.00"
+                                            min="0"
+                                            step="0.01"
+                                            disabled={disabled}
+                                        />
+                                    </div>
+                                    {errors[`followUp_${index}_salesAmount`] && (
+                                        <p className="text-red-500 text-[10px] font-black uppercase tracking-wider ml-1 mt-1.5">{errors[`followUp_${index}_salesAmount`]}</p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount Given (₹)</Label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <span className="text-sm font-black text-emerald-600 italic">₹</span>
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            value={followUp.amountGiven || ''}
+                                            onChange={(e) => handleFollowUpChange(index, 'amountGiven', e.target.value)}
+                                            className="h-11 pl-9 bg-white border-slate-200/60 rounded-2xl text-sm font-bold text-slate-800 focus:ring-brand-500/20"
+                                            placeholder="0.00"
+                                            min="0"
+                                            step="0.01"
+                                            disabled={disabled}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2 flex flex-col justify-end">
+                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Balance Amount (₹)</Label>
+                                    <div className="h-11 flex items-center px-4 bg-slate-100/80 border border-slate-200/50 rounded-2xl text-sm font-black text-slate-700">
+                                        ₹ {new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(followUp.balanceAmount || 0)}
+                                    </div>
+                                </div>
                             </div>
                         )}
 

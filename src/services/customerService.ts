@@ -34,7 +34,11 @@ export const customerService = {
                     status: fu.status as FollowUpStatus,
                     remarks: fu.remarks || '',
                     salesAmount: fu.sales_amount ? parseFloat(fu.sales_amount) : undefined,
-                    amountReceived: fu.amount_received
+                    amountReceived: fu.amount_received,
+                    billNo: fu.bill_no || '',
+                    billAmount: fu.bill_amount ? parseFloat(fu.bill_amount) : undefined,
+                    amountGiven: fu.amount_given ? parseFloat(fu.amount_given) : undefined,
+                    balanceAmount: fu.balance_amount ? parseFloat(fu.balance_amount) : undefined
                 })).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()),
                 createdAt: customer.created_at.split('T')[0],
                 branch: customer.branch
@@ -72,8 +76,12 @@ export const customerService = {
                     date: fu.date,
                     status: fu.status,
                     remarks: fu.remarks,
-                    sales_amount: fu.salesAmount || 0,
+                    sales_amount: fu.salesAmount || fu.billAmount || 0,
                     amount_received: fu.amountReceived || false,
+                    bill_no: fu.billNo || null,
+                    bill_amount: fu.billAmount || 0,
+                    amount_given: fu.amountGiven || 0,
+                    balance_amount: fu.balanceAmount || 0,
                     created_by: userId
                 }));
 
@@ -123,8 +131,12 @@ export const customerService = {
                     date: fu.date,
                     status: fu.status,
                     remarks: fu.remarks,
-                    sales_amount: fu.salesAmount || 0,
-                    amount_received: fu.amountReceived || false
+                    sales_amount: fu.salesAmount || fu.billAmount || 0,
+                    amount_received: fu.amountReceived || false,
+                    bill_no: fu.billNo || null,
+                    bill_amount: fu.billAmount || 0,
+                    amount_given: fu.amountGiven || 0,
+                    balance_amount: fu.balanceAmount || 0
                 }));
 
                 const { error: followUpsError } = await client
@@ -157,14 +169,37 @@ export const customerService = {
         }
     },
 
-    updateFollowUpStatus: async (customerId: string, followUpId: string, status: FollowUpStatus, salesAmount?: number, clerkToken?: string): Promise<FollowUp> => {
+    updateFollowUpStatus: async (
+        customerId: string, 
+        followUpId: string, 
+        status: FollowUpStatus, 
+        salesAmount?: number, 
+        billNo?: string,
+        billAmount?: number,
+        amountGiven?: number,
+        balanceAmount?: number,
+        clerkToken?: string
+    ): Promise<FollowUp> => {
         try {
             const client = getClient(clerkToken);
             const updateData: any = { status };
-            if (status === 'Sales completed' && salesAmount !== undefined) {
-                updateData.sales_amount = salesAmount;
-            } else if (status !== 'Sales completed') {
+            if (status === 'Sales completed') {
+                updateData.sales_amount = billAmount || salesAmount || 0;
+                updateData.bill_no = billNo || null;
+                updateData.bill_amount = billAmount || salesAmount || 0;
+                updateData.amount_given = amountGiven || salesAmount || 0;
+                const calculatedBalance = (billAmount !== undefined && amountGiven !== undefined)
+                    ? (billAmount - amountGiven)
+                    : 0;
+                updateData.balance_amount = balanceAmount !== undefined ? balanceAmount : calculatedBalance;
+                updateData.amount_received = updateData.balance_amount <= 0;
+            } else {
                 updateData.sales_amount = 0;
+                updateData.bill_no = null;
+                updateData.bill_amount = 0;
+                updateData.amount_given = 0;
+                updateData.balance_amount = 0;
+                updateData.amount_received = false;
             }
 
             const { data, error } = await client
@@ -183,7 +218,11 @@ export const customerService = {
                 status: data.status as FollowUpStatus,
                 remarks: data.remarks || '',
                 salesAmount: data.sales_amount ? parseFloat(data.sales_amount) : undefined,
-                amountReceived: data.amount_received
+                amountReceived: data.amount_received,
+                billNo: data.bill_no || '',
+                billAmount: data.bill_amount ? parseFloat(data.bill_amount) : undefined,
+                amountGiven: data.amount_given ? parseFloat(data.amount_given) : undefined,
+                balanceAmount: data.balance_amount ? parseFloat(data.balance_amount) : undefined
             };
         } catch (error) {
             console.error('Error updating follow-up status:', error);
@@ -194,6 +233,16 @@ export const customerService = {
     addFollowUp: async (customerId: string, followUp: Omit<FollowUp, 'id'>, userId?: string, clerkToken?: string): Promise<FollowUp> => {
         try {
             const client = getClient(clerkToken);
+
+            let balance = followUp.balanceAmount;
+            let received = followUp.amountReceived;
+            if (followUp.status === 'Sales completed') {
+                const billAmt = followUp.billAmount || followUp.salesAmount || 0;
+                const amtGiven = followUp.amountGiven || followUp.salesAmount || 0;
+                balance = billAmt - amtGiven;
+                received = balance <= 0;
+            }
+
             const { data, error } = await client
                 .from('follow_ups')
                 .insert({
@@ -201,8 +250,12 @@ export const customerService = {
                     date: followUp.date,
                     status: followUp.status,
                     remarks: followUp.remarks,
-                    sales_amount: followUp.salesAmount || 0,
-                    amount_received: followUp.amountReceived || false,
+                    sales_amount: followUp.salesAmount || followUp.billAmount || 0,
+                    amount_received: received || false,
+                    bill_no: followUp.billNo || null,
+                    bill_amount: followUp.billAmount || 0,
+                    amount_given: followUp.amountGiven || 0,
+                    balance_amount: balance !== undefined ? balance : 0,
                     created_by: userId
                 })
                 .select()
@@ -216,7 +269,11 @@ export const customerService = {
                 status: data.status as FollowUpStatus,
                 remarks: data.remarks || '',
                 salesAmount: data.sales_amount ? parseFloat(data.sales_amount) : undefined,
-                amountReceived: data.amount_received
+                amountReceived: data.amount_received,
+                billNo: data.bill_no || '',
+                billAmount: data.bill_amount ? parseFloat(data.bill_amount) : undefined,
+                amountGiven: data.amount_given ? parseFloat(data.amount_given) : undefined,
+                balanceAmount: data.balance_amount ? parseFloat(data.balance_amount) : undefined
             };
         } catch (error) {
             console.error('Error adding follow-up:', error);

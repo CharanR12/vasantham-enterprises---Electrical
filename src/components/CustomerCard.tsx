@@ -79,12 +79,22 @@ Created on: ${formatDate(customer.createdAt)}
 
   const getTotalSalesAmount = (): number => {
     return customer.followUps
-      .filter(f => f.status === 'Sales completed' && f.salesAmount)
-      .reduce((sum, f) => sum + (f.salesAmount || 0), 0);
+      .filter(f => f.status === 'Sales completed')
+      .reduce((sum, f) => sum + (f.billAmount || f.salesAmount || 0), 0);
+  };
+
+  const getTotalPendingAmount = (): number => {
+    return customer.followUps
+      .filter(f => f.status === 'Sales completed')
+      .reduce((sum, f) => {
+        if (f.balanceAmount !== undefined) return sum + f.balanceAmount;
+        return sum + (f.amountReceived ? 0 : (f.salesAmount || 0));
+      }, 0);
   };
 
   const nextFollowUp = getNextFollowUp();
   const totalSalesAmount = getTotalSalesAmount();
+  const totalPendingAmount = getTotalPendingAmount();
 
   const getStatusColor = (status: FollowUpStatus) => {
     switch (status) {
@@ -195,10 +205,20 @@ Created on: ${formatDate(customer.createdAt)}
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Last Contact: <span className="text-slate-600">{formatDate(customer.lastContactedDate)}</span></span>
               </div>
             )}
-            {totalSalesAmount > 0 && (
-              <div className="flex items-center px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100">
-                <DollarSign className="h-3.5 w-3.5 text-emerald-600 mr-1" />
-                <span className="text-[11px] font-black text-emerald-700">{formatCurrency(totalSalesAmount)}</span>
+            {(totalSalesAmount > 0 || totalPendingAmount > 0) && (
+              <div className="flex items-center gap-2">
+                {totalSalesAmount > 0 && (
+                  <div className="flex items-center px-2 py-1 bg-emerald-50 rounded-lg border border-emerald-100" title="Total Sales Completed">
+                    <DollarSign className="h-3.5 w-3.5 text-emerald-600 mr-1" />
+                    <span className="text-[11px] font-black text-emerald-700">{formatCurrency(totalSalesAmount)}</span>
+                  </div>
+                )}
+                {totalPendingAmount > 0 && (
+                  <div className="flex items-center px-2 py-1 bg-rose-50 rounded-lg border border-rose-100 animate-pulse" title="Pending Balance Amount">
+                    <span className="text-[10px] font-bold text-rose-600 mr-1">Bal:</span>
+                    <span className="text-[11px] font-black text-rose-700">{formatCurrency(totalPendingAmount)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -220,17 +240,33 @@ Created on: ${formatDate(customer.createdAt)}
               {nextFollowUp.remarks && (
                 <div className="text-xs text-slate-500 italic leading-relaxed line-clamp-2 mt-2 p-2 bg-white/50 rounded-xl border border-white">"{nextFollowUp.remarks}"</div>
               )}
-              {nextFollowUp.status === 'Sales completed' && nextFollowUp.salesAmount && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-200/50">
-                  <span className="text-xs font-bold text-emerald-700">Sale: {formatCurrency(nextFollowUp.salesAmount)}</span>
-                  {nextFollowUp.amountReceived ? (
-                    <span className="inline-flex items-center text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-md shadow-sm">
-                      Received
+              {nextFollowUp.status === 'Sales completed' && (
+                <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-slate-200/50">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-emerald-700">
+                      Sale: {formatCurrency(nextFollowUp.billAmount || nextFollowUp.salesAmount || 0)}
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-md shadow-sm">
-                      Pending
-                    </span>
+                    {nextFollowUp.amountReceived ? (
+                      <span className="inline-flex items-center text-[10px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-md shadow-sm">
+                        Received
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-[10px] font-black bg-rose-500 text-white px-2 py-0.5 rounded-md shadow-sm">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  {nextFollowUp.billNo && (
+                    <div className="text-[10px] text-slate-500 font-semibold flex justify-between">
+                      <span>Bill No: <span className="text-slate-700">{nextFollowUp.billNo}</span></span>
+                      <span>Paid: <span className="text-slate-700">{formatCurrency(nextFollowUp.amountGiven || 0)}</span></span>
+                    </div>
+                  )}
+                  {nextFollowUp.balanceAmount !== undefined && nextFollowUp.balanceAmount > 0 && (
+                    <div className="text-[10px] text-rose-600 font-bold flex justify-between">
+                      <span>Pending Balance:</span>
+                      <span>{formatCurrency(nextFollowUp.balanceAmount)}</span>
+                    </div>
                   )}
                 </div>
               )}

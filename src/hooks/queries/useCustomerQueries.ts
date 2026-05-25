@@ -112,9 +112,37 @@ export const useUpdateFollowUpStatusMutation = () => {
     const { getToken } = useAuth();
 
     return useMutation({
-        mutationFn: async ({ customerId, followUpId, status, salesAmount }: { customerId: string, followUpId: string, status: FollowUpStatus, salesAmount?: number }) => {
+        mutationFn: async ({ 
+            customerId, 
+            followUpId, 
+            status, 
+            salesAmount, 
+            billNo, 
+            billAmount, 
+            amountGiven, 
+            balanceAmount 
+        }: { 
+            customerId: string, 
+            followUpId: string, 
+            status: FollowUpStatus, 
+            salesAmount?: number, 
+            billNo?: string, 
+            billAmount?: number, 
+            amountGiven?: number, 
+            balanceAmount?: number 
+        }) => {
             const token = await getToken({ template: 'supabase' }) || undefined;
-            return customerService.updateFollowUpStatus(customerId, followUpId, status, salesAmount, token);
+            return customerService.updateFollowUpStatus(
+                customerId, 
+                followUpId, 
+                status, 
+                salesAmount, 
+                billNo, 
+                billAmount, 
+                amountGiven, 
+                balanceAmount, 
+                token
+            );
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: customerKeys.all });

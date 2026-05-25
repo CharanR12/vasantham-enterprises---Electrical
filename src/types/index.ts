@@ -24,6 +24,10 @@ export type FollowUp = {
   remarks: string;
   salesAmount?: number; // New field for sales amount
   amountReceived?: boolean; // New field for amount received status
+  billNo?: string;
+  billAmount?: number;
+  amountGiven?: number;
+  balanceAmount?: number;
 };
 
 export type Customer = {

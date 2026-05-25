@@ -21,7 +21,11 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
         date: new Date().toISOString().split('T')[0],
         status: 'Not yet contacted' as FollowUpStatus,
         remarks: '',
-        amountReceived: false
+        amountReceived: false,
+        billNo: '',
+        billAmount: undefined,
+        amountGiven: undefined,
+        balanceAmount: undefined
     };
 
     const initialState = {
@@ -115,10 +119,21 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
         }
     };
 
-    const handleFollowUpChange = (index: number, field: string, value: string | number | boolean) => {
+    const handleFollowUpChange = (index: number, field: string, value: any) => {
         const newFollowUps = [...formData.followUps];
-        if (field === 'salesAmount') {
-            newFollowUps[index] = { ...newFollowUps[index], [field]: value ? parseFloat(value.toString()) : undefined };
+        if (field === 'salesAmount' || field === 'billAmount' || field === 'amountGiven') {
+            const parsedValue = value ? parseFloat(value.toString()) : undefined;
+            newFollowUps[index] = { ...newFollowUps[index], [field]: parsedValue };
+            
+            // Auto-calculate balance and received status if it is Sales completed
+            const billAmt = field === 'billAmount' ? (parsedValue || 0) : (newFollowUps[index].billAmount || 0);
+            const amtGiven = field === 'amountGiven' ? (parsedValue || 0) : (newFollowUps[index].amountGiven || 0);
+            const balance = billAmt - amtGiven;
+            
+            newFollowUps[index].balanceAmount = balance;
+            newFollowUps[index].amountReceived = balance <= 0;
+            // Align salesAmount for backward compatibility
+            newFollowUps[index].salesAmount = billAmt;
         } else {
             newFollowUps[index] = { ...newFollowUps[index], [field]: value };
         }
@@ -131,7 +146,11 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
             date: new Date().toISOString().split('T')[0],
             status: 'Not yet contacted' as FollowUpStatus,
             remarks: '',
-            amountReceived: false
+            amountReceived: false,
+            billNo: '',
+            billAmount: undefined,
+            amountGiven: undefined,
+            balanceAmount: undefined
         };
         setFormData(prev => ({
             ...prev,
