@@ -4,7 +4,7 @@ import { customerService } from '../../services/customerService';
 import { salesPersonService } from '../../services/salesPersonService';
 import { useUserRole } from '../useUserRole';
 import { useBranch } from '../../contexts/BranchContext';
-import { Customer, FollowUpStatus, FollowUp } from '../../types';
+import { Customer, FollowUpStatus, FollowUp, PaymentInstallment } from '../../types';
 
 export const customerKeys = {
     all: ['customers'] as const,
@@ -120,7 +120,8 @@ export const useUpdateFollowUpStatusMutation = () => {
             billNo, 
             billAmount, 
             amountGiven, 
-            balanceAmount 
+            balanceAmount,
+            installments
         }: { 
             customerId: string, 
             followUpId: string, 
@@ -129,7 +130,8 @@ export const useUpdateFollowUpStatusMutation = () => {
             billNo?: string, 
             billAmount?: number, 
             amountGiven?: number, 
-            balanceAmount?: number 
+            balanceAmount?: number,
+            installments?: PaymentInstallment[]
         }) => {
             const token = await getToken({ template: 'supabase' }) || undefined;
             return customerService.updateFollowUpStatus(
@@ -141,6 +143,7 @@ export const useUpdateFollowUpStatusMutation = () => {
                 billAmount, 
                 amountGiven, 
                 balanceAmount, 
+                installments,
                 token
             );
         },

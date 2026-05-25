@@ -17,6 +17,12 @@ export type FollowUpStatus = 'Not yet contacted' | 'Scheduled next follow-up' | 
 
 export type SalesStatus = 'Completed' | 'Not Completed' | 'Sales Closed';
 
+export type PaymentInstallment = {
+  id: string;
+  date: string;
+  amount: number;
+};
+
 export type FollowUp = {
   id: string;
   date: string;
@@ -28,6 +34,7 @@ export type FollowUp = {
   billAmount?: number;
   amountGiven?: number;
   balanceAmount?: number;
+  installments?: PaymentInstallment[];
 };
 
 export type Customer = {

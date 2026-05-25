@@ -12,10 +12,10 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select';
-import { FollowUpStatus } from '../../types';
+import { FollowUpStatus, PaymentInstallment, FollowUp } from '../../types';
 
 interface CustomerFollowUpSectionProps {
-    followUps: any[];
+    followUps: FollowUp[];
     errors: Record<string, string>;
     handleFollowUpChange: (index: number, field: string, value: any) => void;
     addNewFollowUp: () => void;
@@ -162,20 +162,17 @@ export const CustomerFollowUpSection: React.FC<CustomerFollowUpSectionProps> = (
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount Given (₹)</Label>
+                                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Total Paid So Far (₹)</Label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <span className="text-sm font-black text-emerald-600 italic">₹</span>
+                                            <span className="text-sm font-black text-slate-400 italic">₹</span>
                                         </div>
                                         <Input
                                             type="number"
                                             value={followUp.amountGiven || ''}
-                                            onChange={(e) => handleFollowUpChange(index, 'amountGiven', e.target.value)}
-                                            className="h-11 pl-9 bg-white border-slate-200/60 rounded-2xl text-sm font-bold text-slate-800 focus:ring-brand-500/20"
+                                            className="h-11 pl-9 bg-slate-100/80 border border-slate-200/50 rounded-2xl text-sm font-black text-slate-700"
                                             placeholder="0.00"
-                                            min="0"
-                                            step="0.01"
-                                            disabled={disabled}
+                                            disabled={true}
                                         />
                                     </div>
                                 </div>
@@ -184,6 +181,96 @@ export const CustomerFollowUpSection: React.FC<CustomerFollowUpSectionProps> = (
                                     <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Balance Amount (₹)</Label>
                                     <div className="h-11 flex items-center px-4 bg-slate-100/80 border border-slate-200/50 rounded-2xl text-sm font-black text-slate-700">
                                         ₹ {new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(followUp.balanceAmount || 0)}
+                                    </div>
+                                </div>
+
+                                <div className="col-span-full mt-4 border-t border-emerald-100/30 pt-4 space-y-3">
+                                    <div className="flex justify-between items-center px-1">
+                                        <Label className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Installments Timeline Ledger</Label>
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => {
+                                                const currentInst = followUp.installments || [];
+                                                const newInst = [
+                                                    ...currentInst,
+                                                    {
+                                                        id: `inst-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                                        date: new Date().toISOString().split('T')[0],
+                                                        amount: 0
+                                                    }
+                                                ];
+                                                handleFollowUpChange(index, 'installments', newInst);
+                                            }}
+                                            className="h-7 hover:bg-emerald-100/50 text-emerald-600 hover:text-emerald-700 font-black text-[10px] px-2 rounded-lg flex items-center gap-1"
+                                            disabled={disabled}
+                                        >
+                                            <Plus className="h-3 w-3" />
+                                            <span>Add Installment</span>
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                                        {(followUp.installments || []).map((inst, instIdx) => (
+                                            <div key={inst.id} className="grid grid-cols-12 gap-3 items-center bg-white p-3 rounded-2xl border border-slate-200/60 shadow-sm">
+                                                <div className="col-span-1 text-center text-xs font-black text-slate-400">
+                                                    {instIdx + 1}
+                                                </div>
+                                                <div className="col-span-6 md:col-span-5 space-y-1">
+                                                    <Label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Payment Date</Label>
+                                                    <Input
+                                                        type="date"
+                                                        value={inst.date}
+                                                        onChange={(e) => {
+                                                            const updated = (followUp.installments || []).map(item =>
+                                                                item.id === inst.id ? { ...item, date: e.target.value } : item
+                                                            );
+                                                            handleFollowUpChange(index, 'installments', updated);
+                                                        }}
+                                                        className="h-9 bg-white border-slate-200 text-xs rounded-xl font-medium"
+                                                        disabled={disabled}
+                                                    />
+                                                </div>
+                                                <div className="col-span-4 md:col-span-5 space-y-1">
+                                                    <Label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Amount (₹)</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={inst.amount || ''}
+                                                        onChange={(e) => {
+                                                            const amt = parseFloat(e.target.value) || 0;
+                                                            const updated = (followUp.installments || []).map(item =>
+                                                                item.id === inst.id ? { ...item, amount: amt } : item
+                                                            );
+                                                            handleFollowUpChange(index, 'installments', updated);
+                                                        }}
+                                                        className="h-9 bg-white border-slate-200 text-xs font-bold rounded-xl text-slate-800"
+                                                        placeholder="0"
+                                                        disabled={disabled}
+                                                    />
+                                                </div>
+                                                <div className="col-span-1 flex justify-center pt-4">
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={() => {
+                                                            const updated = (followUp.installments || []).filter(item => item.id !== inst.id);
+                                                            handleFollowUpChange(index, 'installments', updated);
+                                                        }}
+                                                        className="h-8 w-8 p-0 hover:bg-rose-50 hover:text-rose-600 rounded-xl text-slate-300"
+                                                        disabled={disabled}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(followUp.installments || []).length === 0 && (
+                                            <div className="text-center py-6 bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl text-slate-400 text-xs">
+                                                No installments recorded. Click "+ Add Installment" to begin.
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

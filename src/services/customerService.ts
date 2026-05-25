@@ -1,5 +1,5 @@
 import { getClient, handleSupabaseError } from './apiUtils';
-import { Customer, FollowUp, FollowUpStatus, ReferralSource } from '../types';
+import { Customer, FollowUp, FollowUpStatus, ReferralSource, PaymentInstallment } from '../types';
 
 export const customerService = {
     getCustomers: async (branch: string, clerkToken?: string): Promise<Customer[]> => {
@@ -28,18 +28,58 @@ export const customerService = {
                 salesPerson: customer.sales_person || { id: '', name: 'Unknown' },
                 remarks: customer.remarks || '',
                 lastContactedDate: customer.last_contacted_date || undefined,
-                followUps: (customer.follow_ups || []).map((fu: any) => ({
-                    id: fu.id,
-                    date: fu.date,
-                    status: fu.status as FollowUpStatus,
-                    remarks: fu.remarks || '',
-                    salesAmount: fu.sales_amount ? parseFloat(fu.sales_amount) : undefined,
-                    amountReceived: fu.amount_received,
-                    billNo: fu.bill_no || '',
-                    billAmount: fu.bill_amount ? parseFloat(fu.bill_amount) : undefined,
-                    amountGiven: fu.amount_given ? parseFloat(fu.amount_given) : undefined,
-                    balanceAmount: fu.balance_amount ? parseFloat(fu.balance_amount) : undefined
-                })).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+                followUps: (customer.follow_ups || []).map((fu: any) => {
+                    const salesAmt = fu.sales_amount ? parseFloat(fu.sales_amount) : 0;
+                    let billAmt = fu.bill_amount ? parseFloat(fu.bill_amount) : undefined;
+                    let amtGiven = fu.amount_given ? parseFloat(fu.amount_given) : undefined;
+                    let balAmt = fu.balance_amount ? parseFloat(fu.balance_amount) : undefined;
+                    let insts = Array.isArray(fu.installments) ? fu.installments : [];
+
+                    // Legacy records alignment fallback
+                    if (fu.status === 'Sales completed') {
+                        if (billAmt === undefined || billAmt === null || billAmt === 0) {
+                            billAmt = salesAmt;
+                        }
+                        if (amtGiven === undefined || amtGiven === null || amtGiven === 0) {
+                            if (fu.amount_received) {
+                                amtGiven = billAmt;
+                            } else if (balAmt !== undefined && balAmt !== null && balAmt !== 0) {
+                                amtGiven = Math.max(0, billAmt - balAmt);
+                            } else {
+                                amtGiven = 0;
+                            }
+                        }
+                        
+                        // Self-correcting balance calculation to prevent any database drift
+                        if (fu.amount_received) {
+                            balAmt = 0;
+                        } else {
+                            balAmt = Math.max(0, billAmt - amtGiven);
+                        }
+
+                        if (insts.length === 0 && amtGiven > 0) {
+                            insts = [{
+                                id: 'inst-initial',
+                                date: fu.date,
+                                amount: amtGiven
+                            }];
+                        }
+                    }
+
+                    return {
+                        id: fu.id,
+                        date: fu.date,
+                        status: fu.status as FollowUpStatus,
+                        remarks: fu.remarks || '',
+                        salesAmount: salesAmt || billAmt || undefined,
+                        amountReceived: fu.amount_received,
+                        billNo: fu.bill_no || '',
+                        billAmount: billAmt,
+                        amountGiven: amtGiven,
+                        balanceAmount: balAmt,
+                        installments: insts
+                    };
+                }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()),
                 createdAt: customer.created_at.split('T')[0],
                 branch: customer.branch
             }));
@@ -82,6 +122,7 @@ export const customerService = {
                     bill_amount: fu.billAmount || 0,
                     amount_given: fu.amountGiven || 0,
                     balance_amount: fu.balanceAmount || 0,
+                    installments: fu.installments || [],
                     created_by: userId
                 }));
 
@@ -118,32 +159,59 @@ export const customerService = {
 
             handleSupabaseError(customerError);
 
-            const { error: deleteError } = await client
-                .from('follow_ups')
-                .delete()
-                .eq('customer_id', id);
-
-            handleSupabaseError(deleteError);
-
-            if (customerData.followUps && customerData.followUps.length > 0) {
-                const followUpsToInsert = customerData.followUps.map(fu => ({
-                    customer_id: id,
-                    date: fu.date,
-                    status: fu.status,
-                    remarks: fu.remarks,
-                    sales_amount: fu.salesAmount || fu.billAmount || 0,
-                    amount_received: fu.amountReceived || false,
-                    bill_no: fu.billNo || null,
-                    bill_amount: fu.billAmount || 0,
-                    amount_given: fu.amountGiven || 0,
-                    balance_amount: fu.balanceAmount || 0
-                }));
-
-                const { error: followUpsError } = await client
+            // Non-destructive follow-up update/insert strategy to preserve all historic IDs and metadata in Supabase
+            if (customerData.followUps) {
+                // Fetch existing follow-up IDs to distinguish inserts from updates
+                const { data: existingList } = await client
                     .from('follow_ups')
-                    .insert(followUpsToInsert);
+                    .select('id')
+                    .eq('customer_id', id);
+                
+                const existingIds = new Set((existingList || []).map(x => x.id));
+                const newIds = new Set(customerData.followUps.map(x => x.id).filter(Boolean));
 
-                handleSupabaseError(followUpsError);
+                // 1. Delete only the specific follow-ups that the user explicitly removed in the UI form
+                const idsToDelete = [...existingIds].filter(x => !newIds.has(x));
+                if (idsToDelete.length > 0) {
+                    const { error: deleteError } = await client
+                        .from('follow_ups')
+                        .delete()
+                        .in('id', idsToDelete);
+                    handleSupabaseError(deleteError);
+                }
+
+                // 2. Insert or Update the remaining follow-ups
+                for (const fu of customerData.followUps) {
+                    const isExisting = fu.id && existingIds.has(fu.id);
+                    const fuData = {
+                        date: fu.date,
+                        status: fu.status,
+                        remarks: fu.remarks || '',
+                        sales_amount: fu.salesAmount || fu.billAmount || 0,
+                        amount_received: fu.amountReceived || false,
+                        bill_no: fu.billNo || null,
+                        bill_amount: fu.billAmount || 0,
+                        amount_given: fu.amountGiven || 0,
+                        balance_amount: fu.balanceAmount || 0,
+                        installments: fu.installments || []
+                    };
+
+                    if (isExisting) {
+                        const { error: updateError } = await client
+                            .from('follow_ups')
+                            .update(fuData)
+                            .eq('id', fu.id);
+                        handleSupabaseError(updateError);
+                    } else {
+                        const { error: insertError } = await client
+                            .from('follow_ups')
+                            .insert({
+                                ...fuData,
+                                customer_id: id
+                            });
+                        handleSupabaseError(insertError);
+                    }
+                }
             }
 
             const customers = await customerService.getCustomers(branch, clerkToken);
@@ -178,20 +246,37 @@ export const customerService = {
         billAmount?: number,
         amountGiven?: number,
         balanceAmount?: number,
+        installments?: PaymentInstallment[],
         clerkToken?: string
     ): Promise<FollowUp> => {
         try {
             const client = getClient(clerkToken);
             const updateData: any = { status };
             if (status === 'Sales completed') {
-                updateData.sales_amount = billAmount || salesAmount || 0;
                 updateData.bill_no = billNo || null;
                 updateData.bill_amount = billAmount || salesAmount || 0;
-                updateData.amount_given = amountGiven || salesAmount || 0;
-                const calculatedBalance = (billAmount !== undefined && amountGiven !== undefined)
-                    ? (billAmount - amountGiven)
-                    : 0;
-                updateData.balance_amount = balanceAmount !== undefined ? balanceAmount : calculatedBalance;
+                
+                if (installments && installments.length > 0) {
+                    updateData.installments = installments;
+                    const totalGiven = installments.reduce((sum, inst) => sum + inst.amount, 0);
+                    updateData.amount_given = totalGiven;
+                    updateData.balance_amount = updateData.bill_amount - totalGiven;
+                } else {
+                    updateData.amount_given = amountGiven !== undefined ? amountGiven : (salesAmount || 0);
+                    updateData.balance_amount = balanceAmount !== undefined ? balanceAmount : (updateData.bill_amount - updateData.amount_given);
+                    
+                    if (updateData.amount_given > 0) {
+                        updateData.installments = [{
+                            id: 'inst-initial',
+                            date: new Date().toISOString().split('T')[0],
+                            amount: updateData.amount_given
+                        }];
+                    } else {
+                        updateData.installments = [];
+                    }
+                }
+                
+                updateData.sales_amount = updateData.bill_amount;
                 updateData.amount_received = updateData.balance_amount <= 0;
             } else {
                 updateData.sales_amount = 0;
@@ -200,6 +285,7 @@ export const customerService = {
                 updateData.amount_given = 0;
                 updateData.balance_amount = 0;
                 updateData.amount_received = false;
+                updateData.installments = [];
             }
 
             const { data, error } = await client
@@ -222,7 +308,8 @@ export const customerService = {
                 billNo: data.bill_no || '',
                 billAmount: data.bill_amount ? parseFloat(data.bill_amount) : undefined,
                 amountGiven: data.amount_given ? parseFloat(data.amount_given) : undefined,
-                balanceAmount: data.balance_amount ? parseFloat(data.balance_amount) : undefined
+                balanceAmount: data.balance_amount ? parseFloat(data.balance_amount) : undefined,
+                installments: Array.isArray(data.installments) ? data.installments : []
             };
         } catch (error) {
             console.error('Error updating follow-up status:', error);
@@ -236,10 +323,26 @@ export const customerService = {
 
             let balance = followUp.balanceAmount;
             let received = followUp.amountReceived;
+            let finalInstallments = followUp.installments || [];
+            let totalGiven = followUp.amountGiven || 0;
+
             if (followUp.status === 'Sales completed') {
                 const billAmt = followUp.billAmount || followUp.salesAmount || 0;
-                const amtGiven = followUp.amountGiven || followUp.salesAmount || 0;
-                balance = billAmt - amtGiven;
+                
+                if (finalInstallments.length > 0) {
+                    totalGiven = finalInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+                    balance = billAmt - totalGiven;
+                } else {
+                    totalGiven = followUp.amountGiven || followUp.salesAmount || 0;
+                    balance = billAmt - totalGiven;
+                    if (totalGiven > 0) {
+                        finalInstallments = [{
+                            id: 'inst-initial',
+                            date: followUp.date,
+                            amount: totalGiven
+                        }];
+                    }
+                }
                 received = balance <= 0;
             }
 
@@ -254,8 +357,9 @@ export const customerService = {
                     amount_received: received || false,
                     bill_no: followUp.billNo || null,
                     bill_amount: followUp.billAmount || 0,
-                    amount_given: followUp.amountGiven || 0,
+                    amount_given: totalGiven,
                     balance_amount: balance !== undefined ? balance : 0,
+                    installments: finalInstallments,
                     created_by: userId
                 })
                 .select()
@@ -273,7 +377,8 @@ export const customerService = {
                 billNo: data.bill_no || '',
                 billAmount: data.bill_amount ? parseFloat(data.bill_amount) : undefined,
                 amountGiven: data.amount_given ? parseFloat(data.amount_given) : undefined,
-                balanceAmount: data.balance_amount ? parseFloat(data.balance_amount) : undefined
+                balanceAmount: data.balance_amount ? parseFloat(data.balance_amount) : undefined,
+                installments: Array.isArray(data.installments) ? data.installments : []
             };
         } catch (error) {
             console.error('Error adding follow-up:', error);

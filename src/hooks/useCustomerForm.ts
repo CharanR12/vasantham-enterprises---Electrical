@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Customer, ReferralSource, SalesPerson, FollowUpStatus } from '../types';
+import { Customer, ReferralSource, SalesPerson, FollowUpStatus, PaymentInstallment } from '../types';
 import { useBranch } from '../contexts/BranchContext';
 import {
     useAddCustomerMutation,
@@ -25,7 +25,8 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
         billNo: '',
         billAmount: undefined,
         amountGiven: undefined,
-        balanceAmount: undefined
+        balanceAmount: undefined,
+        installments: []
     };
 
     const initialState = {
@@ -39,7 +40,61 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
         followUps: [initialFollowUp]
     };
 
-    const [formData, setFormData] = useState<Customer | Omit<Customer, 'id' | 'createdAt'>>(customer || initialState);
+    const getInitialFormData = (): Customer | Omit<Customer, 'id' | 'createdAt'> => {
+        if (!customer) return initialState;
+        
+        // Dynamic legacy check & repair on form load to guarantee zero cached-data issues!
+        const repairedFollowUps = customer.followUps.map(fu => {
+            if (fu.status === 'Sales completed') {
+                const salesAmt = fu.salesAmount || 0;
+                let billAmt = fu.billAmount;
+                let amtGiven = fu.amountGiven;
+                let balAmt = fu.balanceAmount;
+                let insts = Array.isArray(fu.installments) ? fu.installments : [];
+
+                if (billAmt === undefined || billAmt === null || billAmt === 0) {
+                    billAmt = salesAmt;
+                }
+                if (amtGiven === undefined || amtGiven === null || amtGiven === 0) {
+                    if (fu.amountReceived) {
+                        amtGiven = billAmt;
+                    } else if (balAmt !== undefined && balAmt !== null && balAmt !== 0) {
+                        amtGiven = Math.max(0, billAmt - balAmt);
+                    } else {
+                        amtGiven = 0;
+                    }
+                }
+                if (fu.amountReceived) {
+                    balAmt = 0;
+                } else {
+                    balAmt = Math.max(0, billAmt - amtGiven);
+                }
+                if (insts.length === 0 && amtGiven > 0) {
+                    insts = [{
+                        id: 'inst-initial',
+                        date: fu.date,
+                        amount: amtGiven
+                    }];
+                }
+
+                return {
+                    ...fu,
+                    billAmount: billAmt,
+                    amountGiven: amtGiven,
+                    balanceAmount: balAmt,
+                    installments: insts
+                };
+            }
+            return fu;
+        });
+
+        return {
+            ...customer,
+            followUps: repairedFollowUps
+        };
+    };
+
+    const [formData, setFormData] = useState<Customer | Omit<Customer, 'id' | 'createdAt'>>(getInitialFormData());
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Auto-select "Solar Representative" if in Solar branch
@@ -134,6 +189,67 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
             newFollowUps[index].amountReceived = balance <= 0;
             // Align salesAmount for backward compatibility
             newFollowUps[index].salesAmount = billAmt;
+
+            // Auto-register as initial installment in array
+            if (amtGiven > 0) {
+                newFollowUps[index].installments = [{
+                    id: 'inst-initial',
+                    date: newFollowUps[index].date || new Date().toISOString().split('T')[0],
+                    amount: amtGiven
+                }];
+            } else {
+                newFollowUps[index].installments = [];
+            }
+        } else if (field === 'amountReceived') {
+            const received = !!value;
+            const billAmt = newFollowUps[index].billAmount || newFollowUps[index].salesAmount || 0;
+            newFollowUps[index].amountReceived = received;
+            if (received) {
+                newFollowUps[index].amountGiven = billAmt;
+                newFollowUps[index].balanceAmount = 0;
+                
+                const currentInst = newFollowUps[index].installments || [];
+                if (currentInst.length === 0 && billAmt > 0) {
+                    newFollowUps[index].installments = [{
+                        id: 'inst-initial',
+                        date: newFollowUps[index].date || new Date().toISOString().split('T')[0],
+                        amount: billAmt
+                    }];
+                } else if (currentInst.length > 0) {
+                    const totalGiven = currentInst.reduce((sum, inst) => sum + (inst.amount || 0), 0);
+                    if (totalGiven !== billAmt) {
+                        newFollowUps[index].installments = [{
+                            id: 'inst-initial',
+                            date: newFollowUps[index].date || new Date().toISOString().split('T')[0],
+                            amount: billAmt
+                        }];
+                    }
+                }
+            } else {
+                newFollowUps[index].amountGiven = 0;
+                newFollowUps[index].balanceAmount = billAmt;
+                newFollowUps[index].installments = [];
+            }
+        } else if (field === 'installments') {
+            const list = value as PaymentInstallment[];
+            const billAmt = newFollowUps[index].billAmount || 0;
+            const totalGiven = list.reduce((sum, inst) => sum + (inst.amount || 0), 0);
+            const balance = billAmt - totalGiven;
+
+            newFollowUps[index] = {
+                ...newFollowUps[index],
+                installments: list,
+                amountGiven: totalGiven,
+                balanceAmount: balance,
+                amountReceived: balance <= 0
+            };
+        } else if (field === 'date') {
+            newFollowUps[index] = { ...newFollowUps[index], [field]: value };
+            if (newFollowUps[index].installments && newFollowUps[index].installments.length > 0) {
+                newFollowUps[index].installments = newFollowUps[index].installments.map(inst => 
+                    inst.id === 'inst-initial' ? { ...inst, date: value } : inst
+                );
+            }
         } else {
             newFollowUps[index] = { ...newFollowUps[index], [field]: value };
         }
@@ -150,7 +266,8 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
             billNo: '',
             billAmount: undefined,
             amountGiven: undefined,
-            balanceAmount: undefined
+            balanceAmount: undefined,
+            installments: []
         };
         setFormData(prev => ({
             ...prev,

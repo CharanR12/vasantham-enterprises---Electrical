@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Customer, FollowUpStatus } from '../types';
-import { Calendar as CalendarIcon, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Customer, FollowUpStatus, PaymentInstallment } from '../types';
+import { Calendar as CalendarIcon, DollarSign, CheckCircle, Clock, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { useUpdateFollowUpStatusMutation } from '../hooks/queries/useCustomerQueries';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,9 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
   }>>({});
 
   const [editingDetailsId, setEditingDetailsId] = useState<string | null>(null);
+  const [addingInstallmentId, setAddingInstallmentId] = useState<string | null>(null);
+  const [newInstallmentDate, setNewInstallmentDate] = useState<string>('');
+  const [newInstallmentAmount, setNewInstallmentAmount] = useState<string>('');
 
   const formatDate = (dateString: string): string => {
     try {
@@ -121,6 +124,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
     }
   };
 
+
   const sortedFollowUps = [...customer.followUps].sort(
     (a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime()
   );
@@ -190,133 +194,102 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
 
                   {followUp.status === 'Sales completed' && (
                     <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-xl p-5 shadow-sm space-y-4 animate-in fade-in duration-300">
-                      {editingDetailsId === followUp.id || (!followUp.billAmount && !followUp.salesAmount) ? (
-                        /* Edit / Form mode */
-                        <div className="space-y-4">
-                          <h4 className="text-xs font-black uppercase text-emerald-800 tracking-wider">Configure Sales Payments</h4>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Bill No</Label>
-                              <Input
-                                type="text"
-                                value={salesDetails[followUp.id]?.billNo || ''}
-                                onChange={(e) => handleSalesDetailChange(followUp.id, 'billNo', e.target.value)}
-                                className="h-9 bg-white border-emerald-100 rounded-xl text-xs font-medium"
-                                placeholder="INV-001"
-                              />
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
+                              <DollarSign className="h-4 w-4" />
                             </div>
-                            <div className="space-y-1">
-                              <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Bill Amount (₹)</Label>
-                              <Input
-                                type="number"
-                                value={salesDetails[followUp.id]?.billAmount || ''}
-                                onChange={(e) => handleSalesDetailChange(followUp.id, 'billAmount', e.target.value)}
-                                className="h-9 bg-white border-emerald-100 rounded-xl text-xs font-bold"
-                                placeholder="0"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Amount Given (₹)</Label>
-                              <Input
-                                type="number"
-                                value={salesDetails[followUp.id]?.amountGiven || ''}
-                                onChange={(e) => handleSalesDetailChange(followUp.id, 'amountGiven', e.target.value)}
-                                className="h-9 bg-white border-emerald-100 rounded-xl text-xs font-bold"
-                                placeholder="0"
-                              />
-                            </div>
-                            <div className="space-y-1 flex flex-col justify-end">
-                              <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Balance</Label>
-                              <div className="h-9 flex items-center px-3 bg-emerald-100/60 rounded-xl text-xs font-black text-emerald-800">
-                                {formatCurrency(calculateBalance(followUp.id))}
-                              </div>
-                            </div>
+                            <span className="text-xs font-black text-emerald-800 uppercase tracking-wider">Completed Sale Details</span>
                           </div>
-                          <div className="flex justify-end gap-2 pt-2">
-                            {(followUp.billAmount || followUp.salesAmount) && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingDetailsId(null)}
-                                className="h-8 rounded-lg text-xs"
-                              >
-                                Cancel
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              onClick={() => handleSaveSalesDetails(followUp.id)}
-                              className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg px-4 text-xs font-bold"
-                            >
-                              Save Details
-                            </Button>
+                          {followUp.amountReceived ? (
+                            <div className="px-2.5 py-1 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              <span>Fully Received</span>
+                            </div>
+                          ) : (
+                            <div className="px-2.5 py-1 bg-rose-50 border border-rose-100 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                              <span>Pending Payment</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick Summary Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm text-xs">
+                          <div className="space-y-0.5">
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill No</div>
+                            <div className="font-semibold text-slate-800">{followUp.billNo || 'N/A'}</div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill Amount</div>
+                            <div className="font-bold text-slate-800">{formatCurrency(followUp.billAmount || followUp.salesAmount || 0)}</div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Paid</div>
+                            <div className="font-bold text-emerald-700">{formatCurrency(followUp.amountGiven || followUp.salesAmount || 0)}</div>
+                          </div>
+                          <div className="space-y-0.5">
+                            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Balance Pending</div>
+                            <div className={`font-black ${followUp.balanceAmount && followUp.balanceAmount > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
+                              {formatCurrency(followUp.balanceAmount !== undefined ? followUp.balanceAmount : (followUp.amountReceived ? 0 : (followUp.salesAmount || 0)))}
+                            </div>
                           </div>
                         </div>
-                      ) : (
-                        /* Presentation mode */
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-lg bg-emerald-100/80 flex items-center justify-center text-emerald-700">
-                                <DollarSign className="h-4 w-4" />
-                              </div>
-                              <span className="text-xs font-black text-emerald-800 uppercase tracking-wider">Completed Sale Details</span>
-                            </div>
-                            {followUp.amountReceived ? (
-                              <div className="px-2.5 py-1 bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                <span>Fully Received</span>
-                              </div>
-                            ) : (
-                              <div className="px-2.5 py-1 bg-rose-50 border border-rose-100 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 animate-pulse">
-                                <span>Pending Payment</span>
-                              </div>
-                            )}
+
+                        {/* Installments History Section */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center px-1">
+                            <span className="text-[10px] font-black uppercase text-emerald-800 tracking-wider">Installments Ledger</span>
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm text-xs">
-                            <div className="space-y-0.5">
-                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill No</div>
-                              <div className="font-semibold text-slate-800">{followUp.billNo || 'N/A'}</div>
-                            </div>
-                            <div className="space-y-0.5">
-                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill Amount</div>
-                              <div className="font-bold text-slate-800">{formatCurrency(followUp.billAmount || followUp.salesAmount || 0)}</div>
-                            </div>
-                            <div className="space-y-0.5">
-                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Amount Paid</div>
-                              <div className="font-bold text-emerald-700">{formatCurrency(followUp.amountGiven || followUp.salesAmount || 0)}</div>
-                            </div>
-                            <div className="space-y-0.5">
-                              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Balance Pending</div>
-                              <div className={`font-black ${followUp.balanceAmount && followUp.balanceAmount > 0 ? 'text-rose-600' : 'text-slate-500'}`}>
-                                {formatCurrency(followUp.balanceAmount !== undefined ? followUp.balanceAmount : (followUp.amountReceived ? 0 : (followUp.salesAmount || 0)))}
-                              </div>
-                            </div>
-                          </div>
+                          {/* Ledger Timeline List */}
+                          <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+                            {(() => {
+                              let list = [...(followUp.installments || [])];
+                              // Synthesize for legacy if needed
+                              if (list.length === 0 && (followUp.amountGiven || 0) > 0) {
+                                list = [{
+                                  id: 'inst-initial',
+                                  date: followUp.date,
+                                  amount: followUp.amountGiven || 0
+                                }];
+                              }
 
-                          <div className="flex justify-end pt-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setSalesDetails(prev => ({
-                                  ...prev,
-                                  [followUp.id]: {
-                                    billNo: followUp.billNo || '',
-                                    billAmount: String(followUp.billAmount || followUp.salesAmount || ''),
-                                    amountGiven: String(followUp.amountGiven || followUp.salesAmount || '')
-                                  }
-                                }));
-                                setEditingDetailsId(followUp.id);
-                              }}
-                              className="h-8 hover:bg-emerald-100/50 hover:text-emerald-700 text-emerald-600 rounded-lg text-xs font-bold flex items-center gap-1.5"
-                            >
-                              Edit/Update Payments
-                            </Button>
+                              if (list.length === 0) {
+                                return (
+                                  <div className="text-center py-6 bg-white/40 border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs">
+                                    No installments recorded.
+                                  </div>
+                                );
+                              }
+
+                              return list.map((inst, idx) => (
+                                <div key={inst.id} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 shadow-sm hover:border-emerald-100 transition-colors">
+                                  <div className="flex items-center gap-2.5">
+                                    <span className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-[9px] font-black">
+                                      {idx + 1}
+                                    </span>
+                                    <div className="space-y-0.5">
+                                      <div className="text-[10px] font-semibold text-slate-800">
+                                        Installment Payment
+                                      </div>
+                                      <div className="text-[9px] text-slate-400 font-medium flex items-center gap-1">
+                                        <CalendarIcon className="h-2.5 w-2.5" />
+                                        {formatDate(inst.date)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">
+                                      +{formatCurrency(inst.amount)}
+                                    </div>
+                                  </div>
+                                </div>
+                              ));
+                            })()}
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>
