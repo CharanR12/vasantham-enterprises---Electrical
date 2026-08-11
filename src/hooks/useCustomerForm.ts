@@ -64,11 +64,7 @@ export const useCustomerForm = (customer: Customer | undefined, salesPersons: Sa
                         amtGiven = 0;
                     }
                 }
-                if (fu.amountReceived) {
-                    balAmt = 0;
-                } else {
-                    balAmt = Math.max(0, billAmt - amtGiven);
-                }
+                balAmt = billAmt - amtGiven;
                 if (insts.length === 0 && amtGiven > 0) {
                     insts = [{
                         id: 'inst-initial',

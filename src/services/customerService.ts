@@ -51,11 +51,7 @@ export const customerService = {
                         }
                         
                         // Self-correcting balance calculation to prevent any database drift
-                        if (fu.amount_received) {
-                            balAmt = 0;
-                        } else {
-                            balAmt = Math.max(0, billAmt - amtGiven);
-                        }
+                        balAmt = billAmt - amtGiven;
 
                         if (insts.length === 0 && amtGiven > 0) {
                             insts = [{

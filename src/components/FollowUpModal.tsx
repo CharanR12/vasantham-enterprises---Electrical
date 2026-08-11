@@ -91,7 +91,7 @@ const FollowUpModal: React.FC<FollowUpModalProps> = ({ customer, onClose }) => {
     if (!details) return 0;
     const billAmt = parseFloat(details.billAmount) || 0;
     const amtGiven = parseFloat(details.amountGiven) || 0;
-    return Math.max(0, billAmt - amtGiven);
+    return billAmt - amtGiven;
   };
 
   const handleSaveSalesDetails = async (followUpId: string) => {
